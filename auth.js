@@ -180,11 +180,11 @@
     if (pendingEmail) {
       body.innerHTML = `
         <div class="voc-auth-title" id="vocAuthDialogTitle">Enter your code</div>
-        <div class="voc-auth-sub">We sent a sign-in email to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>. Enter the 6-digit code if the email contains one, or use the secure sign-in link in the email.</div>
+        <div class="voc-auth-sub">We sent a 6-digit verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.</div>
         <label class="voc-auth-label" for="vocOtp">Verification code</label>
         <input class="voc-auth-input voc-auth-otp" id="vocOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="Verification code">
         <button type="button" class="voc-auth-primary" id="vocVerifyBtn">Verify & continue</button>
-        <button type="button" class="voc-auth-secondary" id="vocResendBtn">${resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend email'}</button>
+        <button type="button" class="voc-auth-secondary" id="vocResendBtn">${resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend code'}</button>
         <button type="button" class="voc-auth-link" id="vocChangeEmail" style="margin-top:14px">Use a different email</button>
         <div class="voc-auth-error" id="vocAuthError"></div>
       `;
@@ -201,12 +201,12 @@
 
     body.innerHTML = `
       <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with email</div>
-      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a secure sign-in email to you.</div>
+      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a 6-digit verification code to your email.</div>
       <label class="voc-auth-label" for="vocEmail">Email address</label>
       <div class="voc-auth-phone-wrap" style="grid-template-columns:1fr"><input class="voc-auth-input" id="vocEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address"></div>
-      <button type="button" class="voc-auth-primary" id="vocSendBtn">Send sign-in email</button>
+      <button type="button" class="voc-auth-primary" id="vocSendBtn">Send verification code</button>
       <div class="voc-auth-error" id="vocAuthError"></div>
-      <div class="voc-auth-note">Check your inbox and spam folder. New users are created automatically after verification.</div>
+      <div class="voc-auth-note">Check your inbox and spam folder for the 6-digit code. New users are created automatically after verification.</div>
     `;
     const email = body.querySelector('#vocEmail');
     email.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(email.value); });
@@ -221,12 +221,12 @@
       return;
     }
     const btn = document.getElementById(isResend ? 'vocResendBtn' : 'vocSendBtn');
-    if (btn) { btn.disabled = true; btn.textContent = isResend ? 'Sending…' : 'Sending email…'; }
+    if (btn) { btn.disabled = true; btn.textContent = isResend ? 'Sending…' : 'Sending code…'; }
     setError('');
-    const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await client.auth.signInWithOtp({ email });
     if (error) {
       setError(friendlyError(error));
-      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend email' : 'Send sign-in email'; }
+      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend code' : 'Send verification code'; }
       return;
     }
     pendingEmail = email;

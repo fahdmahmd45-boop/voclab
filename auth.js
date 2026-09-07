@@ -135,7 +135,7 @@
     const lower = raw.toLowerCase();
     if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return `Phone/SMS setup error: ${raw}`;
     if (lower.includes('rate limit') || lower.includes('too many')) return 'Too many attempts. Please wait a little before requesting another code.';
-    if (lower.includes('token') || lower.includes('otp') || lower.includes('invalid')) return 'That verification code is incorrect or expired. Please request a new code.';
+    if (lower.includes('token') || lower.includes('otp') || lower.includes('invalid')) return raw;
     if (lower.includes('captcha')) return 'Verification protection is required before another code can be sent.';
     return raw;
   }

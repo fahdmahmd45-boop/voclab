@@ -1,0 +1,124 @@
+name: Apply mobile performance fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-mobile-rendering:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch index.html
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          s = path.read_text(encoding='utf-8')
+
+          # Idempotent: do nothing if this fix is already present.
+          if 'LIST_PAGE_MOBILE=40' in s:
+              print('Mobile rendering fix already present.')
+              raise SystemExit(0)
+
+          old_css = """  .prog b{font-size:16px}\n}\nbutton,.rchip,.kbtn,.delbtn,.spk,.iconbtn,.addbtn,.next,.opt,.tab{transition:transform .12s ease,filter .12s ease}"""
+          new_css = """  .prog b{font-size:16px}\n  /* Mobile performance: large Oxford decks should paint immediately. */\n  .row,.dcard,.myform{animation:none!important}\n  .row{content-visibility:auto;contain-intrinsic-size:86px}\n}\nbutton,.rchip,.kbtn,.delbtn,.spk,.iconbtn,.addbtn,.next,.opt,.tab{transition:transform .12s ease,filter .12s ease}"""
+          if old_css not in s:
+              raise RuntimeError('Could not find mobile CSS insertion point')
+          s = s.replace(old_css, new_css, 1)
+
+          browse_re = re.compile(
+              r"/\* ---------- Browse ---------- \*/\nfunction renderList\(\)\{.*?\n\}\nfunction toggleKnown\(id\)\{known\.has\(id\)\?known\.delete\(id\):known\.add\(id\);saveKnown\(\);updProg\(\);renderList\(\)\}",
+              re.S,
+          )
+          new_browse = r'''/* ---------- Browse ---------- */
+// Rendering every row in A1/B1 at once can freeze mobile browsers.
+// Start with a small chunk and append more only when requested.
+const LIST_PAGE_MOBILE=40,LIST_PAGE_DESKTOP=120;
+let listVisible=0;
+function listPageSize(){return window.matchMedia&&window.matchMedia('(max-width: 540px)').matches?LIST_PAGE_MOBILE:LIST_PAGE_DESKTOP}
+function wordRowHTML(w,i,base){
+  const id=kid(w),isK=known.has(id);
+  const num=base.indexOf(w)+1;
+  return `<div class="row ${isK?'known':''}" style="animation-delay:${Math.min(i*12,180)}ms">
+    <div class="rtop">
+      <span class="idx" style="opacity:.5;font-size:12px;min-width:26px">#${num>0?num:i+1}</span>
+      <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button>
+      <span class="w">${w[1]}</span>
+      ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${deckName(w[0])}</span>`:''}
+      <span class="t">${TY[w[2]]||w[2]}</span>
+      <span class="m">${w[3]}</span>
+      <span class="u">${unitLabel(w[0])}</span>
+      <button class="kbtn" onclick="toggleKnown('${esc(id)}')">${isK?'✓ Mastered':'Mark'}</button>
+      ${w[0]==='MY'?`<button class="delbtn" onclick="delMy('${esc(w[1])}','${w[0]}')">✕</button>`:''}
+    </div>
+    ${w[4]?`<div class="ex"><button class="spk" onclick="speak('${esc(w[4])}')" title="Speak sentence">${SPK}</button> ${hiWord(w[4],w[1])}</div>`:``}
+  </div>`;
+}
+function renderList(reset=true){
+  const p=pool(),el=document.getElementById('p-list');
+  if(!picked&&fSrc.value==='all'){listVisible=0;el.innerHTML=guardHTML();return}
+  if(!p.length){listVisible=0;el.innerHTML=levelStatHTML()+'<div class="empty">No words match this filter.</div>';return}
+  const step=listPageSize();
+  if(reset||listVisible<1)listVisible=Math.min(step,p.length);
+  else listVisible=Math.min(listVisible,p.length);
+  const shown=p.slice(0,listVisible),base=numberingBase();
+  const more=p.length-listVisible;
+  el.innerHTML=levelStatHTML()+`<div id="wordRows">${shown.map((w,i)=>wordRowHTML(w,i,base)).join('')}</div>`+
+    (more>0?`<button class="next" id="loadMoreWords" style="max-width:320px;margin:14px auto 0;display:block" onclick="loadMoreWords()">Load more · ${more} remaining</button>`:'');
+}
+function loadMoreWords(){
+  const p=pool(),rows=document.getElementById('wordRows');
+  if(!rows)return renderList(true);
+  const from=listVisible,to=Math.min(from+listPageSize(),p.length);
+  if(to<=from)return;
+  const base=numberingBase();
+  rows.insertAdjacentHTML('beforeend',p.slice(from,to).map((w,i)=>wordRowHTML(w,from+i,base)).join(''));
+  listVisible=to;
+  const btn=document.getElementById('loadMoreWords'),more=p.length-listVisible;
+  if(btn){if(more>0)btn.textContent=`Load more · ${more} remaining`;else btn.remove()}
+}
+function toggleKnown(id){known.has(id)?known.delete(id):known.add(id);saveKnown();updProg();renderList(false)}'''
+          s2, n = browse_re.subn(new_browse, s, count=1)
+          if n != 1:
+              raise RuntimeError(f'Browse renderer replacement failed: {n}')
+          s = s2
+
+          old_handlers = """fSrc.onchange=()=>{picked=true;rebuildUnits();refresh()};\nfUnit.onchange=()=>{picked=true;refresh()};fKnown.onchange=()=>{picked=true;refresh()};\nfSearch.oninput=()=>{picked=true;if(curTab==='list')renderList()};"""
+          new_handlers = """fSrc.onchange=()=>{picked=true;listVisible=0;rebuildUnits();refresh()};\nfUnit.onchange=()=>{picked=true;listVisible=0;refresh()};fKnown.onchange=()=>{picked=true;listVisible=0;refresh()};\nfSearch.oninput=()=>{picked=true;listVisible=0;if(curTab==='list')renderList(true)};"""
+          if old_handlers not in s:
+              raise RuntimeError('Could not find filter handlers')
+          s = s.replace(old_handlers, new_handlers, 1)
+
+          old_pick = """function pickCat(id){\n  picked=true;"""
+          new_pick = """function pickCat(id){\n  picked=true;listVisible=0;"""
+          if old_pick not in s:
+              raise RuntimeError('Could not find pickCat')
+          s = s.replace(old_pick, new_pick, 1)
+
+          path.write_text(s, encoding='utf-8')
+          print('Patched index.html successfully.')
+          PY
+
+      - name: Validate and commit
+        shell: bash
+        run: |
+          git diff --check
+          if git diff --quiet; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix A1/B1 mobile rendering performance"
+          git push

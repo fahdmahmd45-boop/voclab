@@ -54,6 +54,11 @@ main{max-width:860px;margin:0 auto;padding:18px 16px 60px}
 .tab{flex:1;white-space:nowrap;padding:9px 13px;border:none;background:transparent;border-radius:9px;font-size:13.5px;font-weight:500;cursor:pointer;color:var(--mut);transition:color .15s,background .15s}
 .tab:hover{color:var(--tx)}
 .tab.on{background:var(--amber);color:var(--onacc);font-weight:600}
+.home-tab{display:flex;align-items:center;justify-content:center;gap:6px}
+.home-tab svg{flex:none}
+#btnExit{border-color:color-mix(in srgb,var(--bad) 42%,var(--line))}
+#btnExit:hover{border-color:var(--bad)}
+@media(max-width:540px){#btnExit{padding:8px 9px}#btnExit .exit-label{display:none}}
 
 /* ---- drawer ---- */
 .drawer{position:fixed;top:0;left:0;bottom:0;width:300px;max-width:86vw;background:var(--hd);border-right:1px solid var(--line);z-index:50;transform:translateX(-100%);transition:transform .3s cubic-bezier(.3,.8,.3,1);padding:22px 18px;overflow-y:auto}
@@ -246,7 +251,7 @@ button:active,.rchip:active,.kbtn:active,.opt:active,.tab:active{transform:scale
 <header>
   <div class="hwrap">
     <h1>voclab<span class="tld">.</span><small>English vocabulary trainer</small></h1>
-    <div class="hbtns"><button class="iconbtn" id="btnDrawer" title="Filters"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg><span>Filters</span></button><button class="iconbtn" id="btnTheme" title="Theme"></button></div>
+    <div class="hbtns"><button class="iconbtn" id="btnExit" title="Exit to level selection" aria-label="Exit to level selection" style="display:none"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="exit-label">Exit</span></button><button class="iconbtn" id="btnDrawer" title="Filters"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg><span>Filters</span></button><button class="iconbtn" id="btnTheme" title="Theme"></button></div>
     <div class="prog"><b id="pKnown">0</b> / <span id="pTotal" style="display:inline">0</span><span>words mastered</span>
       <div class="pbar"><i id="pFill"></i></div>
     </div>
@@ -275,7 +280,7 @@ button:active,.rchip:active,.kbtn:active,.opt:active,.tab:active{transform:scale
 <main>
   
   <div class="tabs">
-    <button class="tab on" data-p="home">Home</button>
+    <button class="tab on home-tab" data-p="home" title="Level selection"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Home</span></button>
     <button class="tab" data-p="dict">Dictionary</button>
     <button class="tab" data-p="list">Browse</button>
     <button class="tab" data-p="cards">Flashcards</button>
@@ -460,7 +465,16 @@ function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUttera
 
 /* ---------- sound effects (Web Audio API, no files needed) ---------- */
 let _actx=null;
-function _ac(){if(!_actx){try{_actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(_actx&&_actx.state==='suspended')_actx.resume();return _actx}
+function _ac(){if(!_actx){try{_actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}return _actx}
+function _withAudio(fn){
+  const ctx=_ac();if(!ctx)return;
+  if(ctx.state==='suspended'){
+    try{const p=ctx.resume();if(p&&typeof p.then==='function')p.then(()=>fn()).catch(()=>{});else fn()}catch(e){}
+  }else fn();
+}
+function unlockSfx(){_withAudio(()=>{})}
+document.addEventListener('pointerdown',unlockSfx,{once:true,capture:true});
+document.addEventListener('touchstart',unlockSfx,{once:true,capture:true,passive:true});
 // warm bell-like note: sine fundamental + soft octave overtone, filtered, with a natural pluck envelope
 function _note(freq,start,dur,peak){
   const ctx=_ac();if(!ctx)return;
@@ -489,10 +503,10 @@ function _thud(freq,start,dur,peak){
   osc.connect(gain);gain.connect(ctx.destination);
   osc.start(t0);osc.stop(t0+dur+.05);
 }
-function sfxFlip(){_note(700,0,.10,.10);_note(1050,.045,.11,.09)}
-function sfxCorrect(){_note(523.25,0,.14,.16);_note(659.25,.09,.16,.16);_note(783.99,.18,.30,.17)} // C-E-G major chime
-function sfxWrong(){_thud(300,0,.22,.16);_thud(220,.10,.28,.13)}
-function sfxClick(){_note(880,0,.06,.09)}
+function sfxFlip(){_withAudio(()=>{_note(700,0,.10,.10);_note(1050,.045,.11,.09)})}
+function sfxCorrect(){_withAudio(()=>{_note(523.25,0,.14,.19);_note(659.25,.09,.16,.19);_note(783.99,.18,.30,.20)})} // C-E-G major chime
+function sfxWrong(){_withAudio(()=>{_thud(300,0,.22,.16);_thud(220,.10,.28,.13)})}
+function sfxClick(){_withAudio(()=>{_note(880,0,.06,.09)})}
 
 /* ---------- helpers ---------- */
 function hiWord(ex,word){ // bold the word inside the example
@@ -845,13 +859,16 @@ function delMy(word,unit){
 
 /* ---------- tabs & init ---------- */
 let curTab='home';
+const btnExit=document.getElementById('btnExit');
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
   t.classList.add('on');curTab=t.dataset.p;
   document.getElementById('p-'+curTab).classList.add('on');
+  if(btnExit)btnExit.style.display=curTab==='home'?'none':'inline-flex';
   refresh();
 });
+if(btnExit)btnExit.onclick=goHome;
 function refresh(){
   if(curTab==='home')renderHome();
   if(curTab==='dict')renderDict();
@@ -1062,6 +1079,14 @@ function attachLongPress(){
 }
 function hideCard(id){cardUnits(id).forEach(u=>hidden.add(u));saveHidden();rebuildUnits();updProg();renderHome()}
 function restoreCard(id){cardUnits(id).forEach(u=>hidden.delete(u));saveHidden();rebuildUnits();updProg();renderHome()}
+// VOC_NAV_AUDIO_FIX_V1
+function goHome(){
+  picked=false;listVisible=0;
+  try{closeDrawer()}catch(e){}
+  const home=document.querySelector('.tab[data-p="home"]');
+  if(home)home.click();
+  try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}
+}
 function goTab(p){document.querySelector(`.tab[data-p="${p}"]`).click()}
 function pickCat(id){
   picked=true;listVisible=0;

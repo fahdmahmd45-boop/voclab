@@ -1,0 +1,131 @@
+name: Convert auth to email
+
+on:
+  push:
+    branches:
+      - feat/email-auth
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/email-auth
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Convert phone auth UI to email auth
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('auth.js')
+          s = p.read_text()
+
+          s = s.replace("let pendingPhone = '';", "let pendingEmail = '';")
+
+          pattern = r"  function normalizeSaudiPhone\(raw\) \{.*?\n  \}\n\n  function maskPhone\(phone\) \{.*?\n  \}\n"
+          replacement = '''  function normalizeEmail(raw) {
+            const value = String(raw || '').trim().toLowerCase();
+            if (!value || value.length > 254) return '';
+            if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) return '';
+            return value;
+          }
+
+          function maskEmail(email) {
+            const value = String(email || '').trim();
+            const at = value.indexOf('@');
+            if (at <= 0) return value || 'Email account';
+            const name = value.slice(0, at);
+            const domain = value.slice(at + 1);
+            const shown = name.length <= 2 ? `${name[0] || ''}•` : `${name.slice(0, 2)}${'•'.repeat(Math.min(5, Math.max(2, name.length - 2)))}`;
+            return `${shown}@${domain}`;
+          }
+'''
+          s, n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+          if n != 1:
+            raise SystemExit('Could not replace phone normalization helpers')
+
+          s = s.replace('pendingPhone', 'pendingEmail')
+          s = s.replace('maskPhone', 'maskEmail')
+          s = s.replace('session.user.phone', 'session.user.email')
+
+          s = s.replace(
+            "if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return `Phone/SMS setup error: ${raw}`;",
+            "if (lower.includes('email provider') || lower.includes('email signups')) return `Email sign-in setup error: ${raw}`;"
+          )
+
+          s = s.replace(
+            '<div class=\"voc-auth-row\"><div><small>Phone</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class=\"voc-auth-status\"><i class=\"voc-auth-dot\"></i> Verified</span></div>',
+            '<div class=\"voc-auth-row\"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class=\"voc-auth-status\"><i class=\"voc-auth-dot\"></i> Verified</span></div>'
+          )
+
+          s = s.replace(
+            'We sent a 6-digit verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.',
+            'We sent a sign-in email to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>. Enter the 6-digit code if the email contains one, or use the secure sign-in link in the email.'
+          )
+          s = s.replace('id=\"vocChangePhone\"', 'id=\"vocChangeEmail\"')
+          s = s.replace('Use a different number', 'Use a different email')
+          s = s.replace("body.querySelector('#vocChangePhone')", "body.querySelector('#vocChangeEmail')")
+
+          login_pattern = re.compile(r'''    body\.innerHTML = `\n      <div class=\\"voc-auth-title\\" id=\\"vocAuthDialogTitle\\">Continue with phone</div>.*?    body\.querySelector\('#vocSendBtn'\)\.addEventListener\('click', \(\) => sendOtp\(phone\.value\)\);\n  \}\n\n  async function sendOtp\(rawPhone, isResend = false\) \{''', re.S)
+          login_replacement = '''    body.innerHTML = `
+              <div class=\"voc-auth-title\" id=\"vocAuthDialogTitle\">Continue with email</div>
+              <div class=\"voc-auth-sub\">No password and no SMS fees. We’ll send a secure sign-in email to you.</div>
+              <label class=\"voc-auth-label\" for=\"vocEmail\">Email address</label>
+              <div class=\"voc-auth-phone-wrap\" style=\"grid-template-columns:1fr\"><input class=\"voc-auth-input\" id=\"vocEmail\" type=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"you@example.com\" aria-label=\"Email address\"></div>
+              <button type=\"button\" class=\"voc-auth-primary\" id=\"vocSendBtn\">Send sign-in email</button>
+              <div class=\"voc-auth-error\" id=\"vocAuthError\"></div>
+              <div class=\"voc-auth-note\">Check your inbox and spam folder. New users are created automatically after verification.</div>
+            `;
+            const email = body.querySelector('#vocEmail');
+            email.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(email.value); });
+            body.querySelector('#vocSendBtn').addEventListener('click', () => sendOtp(email.value));
+          }
+
+          async function sendOtp(rawEmail, isResend = false) {'''
+          s, n = login_pattern.subn(login_replacement, s, count=1)
+          if n != 1:
+            raise SystemExit('Could not replace phone login form')
+
+          s = s.replace('const phone = normalizeSaudiPhone(rawPhone);', 'const email = normalizeEmail(rawEmail);')
+          s = s.replace('if (!phone) {', 'if (!email) {', 1)
+          s = s.replace("setError('Enter a valid Saudi mobile number, for example 05XXXXXXXX.');", "setError('Enter a valid email address.');")
+          s = s.replace("btn.textContent = isResend ? 'Sending…' : 'Sending code…';", "btn.textContent = isResend ? 'Sending…' : 'Sending email…';")
+          s = s.replace('const { error } = await client.auth.signInWithOtp({ phone });', "const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });")
+          s = s.replace("btn.textContent = isResend ? 'Resend code' : 'Send verification code';", "btn.textContent = isResend ? 'Resend email' : 'Send sign-in email';")
+          s = s.replace('pendingEmail = phone;', 'pendingEmail = email;')
+          s = s.replace("const { data, error } = await client.auth.verifyOtp({ phone: pendingEmail, token, type: 'sms' });", "const { data, error } = await client.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });")
+          s = s.replace("'Resend code'", "'Resend email'")
+
+          # Make send-time and verification errors appropriate for email.
+          s = s.replace("That verification code is incorrect or expired. Please request a new code.", "That verification code is incorrect or expired. Please request a new email.")
+
+          # Ensure no active phone-auth code remains.
+          forbidden = ['normalizeSaudiPhone(', 'session.user.phone', 'signInWithOtp({ phone', "type: 'sms'", 'vocChangePhone']
+          leftovers = [x for x in forbidden if x in s]
+          if leftovers:
+            raise SystemExit('Phone auth leftovers: ' + ', '.join(leftovers))
+
+          p.write_text(s)
+          PY
+      - name: Validate
+        run: |
+          node --check auth.js
+          git diff --check
+          grep -q "Continue with email" auth.js
+          grep -q "signInWithOtp({ email" auth.js
+          grep -q "verifyOtp({ email" auth.js
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add auth.js
+          git commit -m "Switch sign in from phone to email"
+          git push origin HEAD:feat/email-auth

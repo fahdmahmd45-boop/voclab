@@ -1,0 +1,53 @@
+name: Email OTP code only
+
+on:
+  push:
+    branches:
+      - feat/email-otp-code-only
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/email-otp-code-only
+          fetch-depth: 0
+      - name: Make email auth code-only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('auth.js')
+          s=p.read_text()
+          reps=[
+            ('We sent a sign-in email to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>. Enter the 6-digit code if the email contains one, or use the secure sign-in link in the email.','We sent a 6-digit verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.'),
+            ('No password and no SMS fees. We’ll send a secure sign-in email to you.','No password and no SMS fees. We’ll send a 6-digit verification code to your email.'),
+            ('>Send sign-in email<','>Send verification code<'),
+            ('Check your inbox and spam folder. New users are created automatically after verification.','Check your inbox and spam folder for the 6-digit code. New users are created automatically after verification.'),
+            ("client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })","client.auth.signInWithOtp({ email })"),
+            ("btn.textContent = isResend ? 'Sending…' : 'Sending email…';","btn.textContent = isResend ? 'Sending…' : 'Sending code…';"),
+            ("btn.textContent = isResend ? 'Resend email' : 'Send sign-in email';","btn.textContent = isResend ? 'Resend code' : 'Send verification code';"),
+            ("'Resend email'","'Resend code'"),
+          ]
+          for old,new in reps:
+            if old not in s:
+              raise SystemExit('Missing expected text: '+old)
+            s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - name: Validate
+        run: |
+          node --check auth.js
+          git diff --check
+          grep -q "6-digit verification code" auth.js
+          ! grep -q "emailRedirectTo" auth.js
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add auth.js
+          git commit -m "Use email OTP codes only"
+          git push origin HEAD:feat/email-otp-code-only

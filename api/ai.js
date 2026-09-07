@@ -1,5 +1,5 @@
 const MAX_FILE_BYTES = 2500000;
-const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx']);
+const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx','ppt','pptx','xls','xlsx']);
 
 const schema = {
   type: 'object',
@@ -13,10 +13,13 @@ const schema = {
         properties: {
           word: { type: 'string' },
           type: { type: 'string', enum: ['n','v','adj','adv','phr','conj','prep','pron','det','num','excl','modal','art'] },
+          ipa: { type: 'string' },
+          english_definition: { type: 'string' },
           arabic: { type: 'string' },
-          example: { type: 'string' }
+          example: { type: 'string' },
+          example_arabic: { type: 'string' }
         },
-        required: ['word','type','arabic','example']
+        required: ['word','type','ipa','english_definition','arabic','example','example_arabic']
       }
     }
   },
@@ -53,10 +56,13 @@ function cleanWords(words) {
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
-      word,
+      word: word.slice(0, 120),
       type: String(x.type || 'n'),
-      arabic: String(x.arabic || '').trim(),
-      example: String(x.example || '').trim()
+      ipa: String(x.ipa || '').trim().slice(0, 100),
+      english_definition: String(x.english_definition || '').trim().slice(0, 320),
+      arabic: String(x.arabic || '').trim().slice(0, 220),
+      example: String(x.example || '').trim().slice(0, 320),
+      example_arabic: String(x.example_arabic || '').trim().slice(0, 320)
     });
   }
   return out;
@@ -86,21 +92,29 @@ module.exports = async function handler(req, res) {
     if (!word || word.length > 120) return res.status(400).json({ error: 'Enter a valid English word or phrase.' });
     content.push({
       type: 'input_text',
-      text: `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Keep the Arabic meaning concise and natural. Write one short, natural English example sentence that clearly demonstrates the meaning. Use the most common part of speech and one of the allowed type codes.`
+      text: `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
     });
   } else {
     const filename = String(body.filename || '').replace(/[\\/]/g, '').slice(0, 160);
     const ext = (filename.split('.').pop() || '').toLowerCase();
-    let fileData = String(body.fileData || '');
-    if (fileData.includes(',')) fileData = fileData.split(',').pop();
-    if (!filename || !ALLOWED_EXT.has(ext)) return res.status(400).json({ error: 'Unsupported file type. Use PDF, Word, TXT, CSV, JSON, or Markdown.' });
+    const fileData = String(body.fileData || '');
+
+    if (!filename || !ALLOWED_EXT.has(ext)) {
+      return res.status(400).json({ error: 'Unsupported file type. Use PDF, Word, PowerPoint, Excel, TXT, CSV, JSON, or Markdown.' });
+    }
     if (!fileData) return res.status(400).json({ error: 'The file is empty.' });
-    const approxBytes = Math.floor(fileData.length * 0.75);
+    if (!/^data:[^,]*;base64,/i.test(fileData)) {
+      return res.status(400).json({ error: 'The uploaded file data is invalid. Please choose the file again.' });
+    }
+
+    const comma = fileData.indexOf(',');
+    const base64 = comma >= 0 ? fileData.slice(comma + 1) : '';
+    const approxBytes = Math.floor(base64.length * 0.75);
     if (approxBytes > MAX_FILE_BYTES) return res.status(413).json({ error: 'File is too large. Maximum size is 2.5 MB.' });
 
     content.push({
       type: 'input_text',
-      text: 'Extract the English vocabulary items that are explicitly present in this file. Do not invent words that are not in the file. Remove duplicates and ignore page numbers, isolated punctuation, URLs, and obvious non-vocabulary metadata. For every extracted item, provide its most suitable part-of-speech code, a concise natural Arabic meaning, and one short natural English example sentence. Return JSON matching the schema.'
+      text: 'Read the attached file and extract the useful English vocabulary words and phrases that are explicitly present in it. Do not invent vocabulary that is not in the file. Remove duplicates and ignore very common filler/function words, page numbers, isolated punctuation, URLs, and obvious metadata. Prioritize vocabulary that is useful for an English learner. For every extracted item return the standard IPA pronunciation, the most suitable part-of-speech code, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence, and an accurate natural Arabic translation of the example. Return JSON matching the schema.'
     });
     content.push({ type: 'input_file', filename, file_data: fileData });
   }
@@ -116,7 +130,7 @@ module.exports = async function handler(req, res) {
         model: 'gpt-5.6-luna',
         reasoning: { effort: 'low' },
         store: false,
-        max_output_tokens: mode === 'file' ? 24000 : 1200,
+        max_output_tokens: mode === 'file' ? 24000 : 1600,
         input: [{ role: 'user', content }],
         text: {
           format: {
@@ -129,7 +143,7 @@ module.exports = async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       console.error('OpenAI error', response.status, data?.error?.message || data);
       return res.status(response.status >= 500 ? 502 : 400).json({ error: data?.error?.message || 'AI request failed.' });
@@ -140,7 +154,7 @@ module.exports = async function handler(req, res) {
     let parsed;
     try { parsed = JSON.parse(text); } catch { return res.status(502).json({ error: 'AI returned an unreadable response.' }); }
     const words = cleanWords(parsed.words);
-    if (!words.length) return res.status(422).json({ error: mode === 'file' ? 'No English vocabulary was found in this file.' : 'Could not build this vocabulary entry.' });
+    if (!words.length) return res.status(422).json({ error: mode === 'file' ? 'No useful English vocabulary was found in this file.' : 'Could not build this vocabulary entry.' });
     return res.status(200).json({ words });
   } catch (err) {
     console.error(err);

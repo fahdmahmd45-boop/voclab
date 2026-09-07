@@ -38,19 +38,25 @@ s = s.replace(
 )
 
 s = s.replace(
-    '<div class=\"voc-auth-row\"><div><small>Phone</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class=\"voc-auth-status\"><i class=\"voc-auth-dot\"></i> Verified</span></div>',
-    '<div class=\"voc-auth-row\"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class=\"voc-auth-status\"><i class=\"voc-auth-dot\"></i> Verified</span></div>'
+    '<div class="voc-auth-row"><div><small>Phone</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>',
+    '<div class="voc-auth-row"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>'
 )
 
 s = s.replace(
     'We sent a 6-digit verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.',
     'We sent a sign-in email to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>. Enter the 6-digit code if the email contains one, or use the secure sign-in link in the email.'
 )
-s = s.replace('id=\"vocChangePhone\"', 'id=\"vocChangeEmail\"')
+s = s.replace('id="vocChangePhone"', 'id="vocChangeEmail"')
 s = s.replace('Use a different number', 'Use a different email')
 s = s.replace("body.querySelector('#vocChangePhone')", "body.querySelector('#vocChangeEmail')")
 
-login_pattern = re.compile(r'''    body\.innerHTML = `\n      <div class=\\"voc-auth-title\\" id=\\"vocAuthDialogTitle\\">Continue with phone</div>.*?    body\.querySelector\('#vocSendBtn'\)\.addEventListener\('click', \(\) => sendOtp\(phone\.value\)\);\n  \}\n\n  async function sendOtp\(rawPhone, isResend = false\) \{''', re.S)
+start_marker = '''    body.innerHTML = `
+      <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with phone</div>'''
+end_marker = '  async function sendOtp(rawPhone, isResend = false) {'
+start = s.find(start_marker)
+end = s.find(end_marker, start if start >= 0 else 0)
+if start < 0 or end < 0:
+    raise SystemExit('Could not locate phone login form markers')
 login_replacement = """    body.innerHTML = `
       <div class=\"voc-auth-title\" id=\"vocAuthDialogTitle\">Continue with email</div>
       <div class=\"voc-auth-sub\">No password and no SMS fees. We’ll send a secure sign-in email to you.</div>
@@ -66,9 +72,7 @@ login_replacement = """    body.innerHTML = `
   }
 
   async function sendOtp(rawEmail, isResend = false) {"""
-s, n = login_pattern.subn(lambda _m: login_replacement, s, count=1)
-if n != 1:
-    raise SystemExit('Could not replace phone login form')
+s = s[:start] + login_replacement + s[end + len(end_marker):]
 
 s = s.replace('const phone = normalizeSaudiPhone(rawPhone);', 'const email = normalizeEmail(rawEmail);')
 s = s.replace('if (!phone) {', 'if (!email) {', 1)

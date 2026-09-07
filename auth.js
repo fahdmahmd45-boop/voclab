@@ -15,7 +15,7 @@
   let syncTimer = null;
   let lastSnapshot = '';
   let syncAvailable = true;
-  let pendingPhone = '';
+  let pendingEmail = '';
   let resendTimer = null;
   let resendSeconds = 0;
 
@@ -133,29 +133,28 @@
   function friendlyError(error) {
     const raw = String(error?.message || error || 'Something went wrong. Please try again.');
     const lower = raw.toLowerCase();
-    if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return `Phone/SMS setup error: ${raw}`;
+    if (lower.includes('email provider') || lower.includes('email signups')) return `Email sign-in setup error: ${raw}`;
     if (lower.includes('rate limit') || lower.includes('too many')) return 'Too many attempts. Please wait a little before requesting another code.';
     if (lower.includes('token') || lower.includes('otp') || lower.includes('invalid')) return raw;
     if (lower.includes('captcha')) return 'Verification protection is required before another code can be sent.';
     return raw;
   }
 
-  function normalizeSaudiPhone(raw) {
-    let value = String(raw || '').trim().replace(/[\s()-]/g, '');
-    if (!value) return '';
-    if (value.startsWith('00966')) value = '+966' + value.slice(5);
-    else if (value.startsWith('966')) value = '+' + value;
-    else if (value.startsWith('05')) value = '+966' + value.slice(1);
-    else if (value.startsWith('5') && /^5\d{8}$/.test(value)) value = '+966' + value;
-    if (!/^\+9665\d{8}$/.test(value)) return '';
+  function normalizeEmail(raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    if (!value || value.length > 254) return '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return '';
     return value;
   }
 
-  function maskPhone(phone) {
-    const p = String(phone || '');
-    if (p.startsWith('+966') && p.length >= 12) return `05${p.slice(5, 7)} ••• •${p.slice(-2)}`;
-    if (p.length > 6) return `${p.slice(0, 4)}••••${p.slice(-2)}`;
-    return p || 'Phone account';
+  function maskEmail(email) {
+    const value = String(email || '').trim();
+    const at = value.indexOf('@');
+    if (at <= 0) return value || 'Email account';
+    const name = value.slice(0, at);
+    const domain = value.slice(at + 1);
+    const shown = name.length <= 2 ? `${name[0] || ''}•` : `${name.slice(0, 2)}${'•'.repeat(Math.min(5, Math.max(2, name.length - 2)))}`;
+    return `${shown}@${domain}`;
   }
 
   function renderAuthBody() {
@@ -167,7 +166,7 @@
         <div class="voc-auth-title" id="vocAuthDialogTitle">Your account</div>
         <div class="voc-auth-sub">Your VocLab progress can follow you across devices once cloud sync is enabled for the project.</div>
         <div class="voc-auth-account">
-          <div class="voc-auth-row"><div><small>Phone</small><strong>${escapeHtml(maskPhone(session.user.phone))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>
+          <div class="voc-auth-row"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>
           <div class="voc-auth-row"><div><small>Plan</small><strong>${plan === 'pro' ? 'VocLab Pro' : 'VocLab Free'}</strong></div><span class="voc-auth-plan">${plan === 'pro' ? 'PRO' : 'FREE'}</span></div>
         </div>
         ${plan === 'pro' ? '' : `<div class="voc-auth-pro-card"><div class="voc-auth-pro-top"><strong>VocLab Pro</strong><span class="voc-auth-price">19 SAR / month</span></div><p>Higher AI limits and expanded file tools. Payments will be connected after the payment account is approved.</p><button type="button" class="voc-auth-primary" disabled>Upgrade coming soon</button></div>`}
@@ -178,15 +177,15 @@
       return;
     }
 
-    if (pendingPhone) {
+    if (pendingEmail) {
       body.innerHTML = `
         <div class="voc-auth-title" id="vocAuthDialogTitle">Enter your code</div>
-        <div class="voc-auth-sub">We sent a 6-digit verification code to <strong>${escapeHtml(maskPhone(pendingPhone))}</strong>.</div>
+        <div class="voc-auth-sub">We sent a sign-in email to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>. Enter the 6-digit code if the email contains one, or use the secure sign-in link in the email.</div>
         <label class="voc-auth-label" for="vocOtp">Verification code</label>
         <input class="voc-auth-input voc-auth-otp" id="vocOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="Verification code">
         <button type="button" class="voc-auth-primary" id="vocVerifyBtn">Verify & continue</button>
-        <button type="button" class="voc-auth-secondary" id="vocResendBtn">${resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend code'}</button>
-        <button type="button" class="voc-auth-link" id="vocChangePhone" style="margin-top:14px">Use a different number</button>
+        <button type="button" class="voc-auth-secondary" id="vocResendBtn">${resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend email'}</button>
+        <button type="button" class="voc-auth-link" id="vocChangeEmail" style="margin-top:14px">Use a different email</button>
         <div class="voc-auth-error" id="vocAuthError"></div>
       `;
       const otp = body.querySelector('#vocOtp');
@@ -195,49 +194,49 @@
       body.querySelector('#vocVerifyBtn').addEventListener('click', verifyOtp);
       const resend = body.querySelector('#vocResendBtn');
       resend.disabled = resendSeconds > 0;
-      resend.addEventListener('click', () => sendOtp(pendingPhone, true));
-      body.querySelector('#vocChangePhone').addEventListener('click', () => { pendingPhone = ''; stopResendTimer(); renderAuthBody(); });
+      resend.addEventListener('click', () => sendOtp(pendingEmail, true));
+      body.querySelector('#vocChangeEmail').addEventListener('click', () => { pendingEmail = ''; stopResendTimer(); renderAuthBody(); });
       return;
     }
 
     body.innerHTML = `
-      <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with phone</div>
-      <div class="voc-auth-sub">No password. We’ll send a one-time code to your Saudi mobile number.</div>
-      <label class="voc-auth-label" for="vocPhone">Mobile number</label>
-      <div class="voc-auth-phone-wrap"><div class="voc-auth-country"><span>🇸🇦</span><span>+966</span></div><input class="voc-auth-input" id="vocPhone" inputmode="tel" autocomplete="tel" placeholder="05 1234 5678" aria-label="Saudi mobile number"></div>
-      <button type="button" class="voc-auth-primary" id="vocSendBtn">Send verification code</button>
+      <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with email</div>
+      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a secure sign-in email to you.</div>
+      <label class="voc-auth-label" for="vocEmail">Email address</label>
+      <div class="voc-auth-phone-wrap" style="grid-template-columns:1fr"><input class="voc-auth-input" id="vocEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address"></div>
+      <button type="button" class="voc-auth-primary" id="vocSendBtn">Send sign-in email</button>
       <div class="voc-auth-error" id="vocAuthError"></div>
-      <div class="voc-auth-note">By continuing, you confirm this number belongs to you. Standard SMS charges from your carrier may apply.</div>
+      <div class="voc-auth-note">Check your inbox and spam folder. New users are created automatically after verification.</div>
     `;
-    const phone = body.querySelector('#vocPhone');
-    phone.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(phone.value); });
-    body.querySelector('#vocSendBtn').addEventListener('click', () => sendOtp(phone.value));
+    const email = body.querySelector('#vocEmail');
+    email.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(email.value); });
+    body.querySelector('#vocSendBtn').addEventListener('click', () => sendOtp(email.value));
   }
 
-  async function sendOtp(rawPhone, isResend = false) {
+  async function sendOtp(rawEmail, isResend = false) {
     if (!client) return;
-    const phone = normalizeSaudiPhone(rawPhone);
-    if (!phone) {
-      setError('Enter a valid Saudi mobile number, for example 05XXXXXXXX.');
+    const email = normalizeEmail(rawEmail);
+    if (!email) {
+      setError('Enter a valid email address.');
       return;
     }
     const btn = document.getElementById(isResend ? 'vocResendBtn' : 'vocSendBtn');
-    if (btn) { btn.disabled = true; btn.textContent = isResend ? 'Sending…' : 'Sending code…'; }
+    if (btn) { btn.disabled = true; btn.textContent = isResend ? 'Sending…' : 'Sending email…'; }
     setError('');
-    const { error } = await client.auth.signInWithOtp({ phone });
+    const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
     if (error) {
       setError(friendlyError(error));
-      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend code' : 'Send verification code'; }
+      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend email' : 'Send sign-in email'; }
       return;
     }
-    pendingPhone = phone;
+    pendingEmail = email;
     startResendTimer();
     renderAuthBody();
     setTimeout(() => document.getElementById('vocOtp')?.focus(), 60);
   }
 
   async function verifyOtp() {
-    if (!client || !pendingPhone) return;
+    if (!client || !pendingEmail) return;
     const input = document.getElementById('vocOtp');
     const token = String(input?.value || '').replace(/\D/g, '').slice(0, 6);
     if (token.length !== 6) {
@@ -247,13 +246,13 @@
     const btn = document.getElementById('vocVerifyBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Verifying…'; }
     setError('');
-    const { data, error } = await client.auth.verifyOtp({ phone: pendingPhone, token, type: 'sms' });
+    const { data, error } = await client.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
     if (error) {
       setError(friendlyError(error));
       if (btn) { btn.disabled = false; btn.textContent = 'Verify & continue'; }
       return;
     }
-    pendingPhone = '';
+    pendingEmail = '';
     stopResendTimer();
     session = data.session || null;
     await handleSession(session, true);
@@ -266,7 +265,7 @@
     resendTimer = setInterval(() => {
       resendSeconds -= 1;
       if (resendSeconds <= 0) stopResendTimer();
-      if (!session?.user && pendingPhone && document.getElementById('vocAuthOverlay')?.classList.contains('open')) renderAuthBody();
+      if (!session?.user && pendingEmail && document.getElementById('vocAuthOverlay')?.classList.contains('open')) renderAuthBody();
     }, 1000);
   }
 

@@ -1,0 +1,69 @@
+name: Fix OTP send error mapping
+
+on:
+  push:
+    branches:
+      - fix/otp-send-error
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/otp-send-error
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Patch OTP error handling
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='auth.js';
+          let s=fs.readFileSync(p,'utf8');
+          const oldFn=`function friendlyError(error) {
+    const raw = String(error?.message || error || 'Something went wrong. Please try again.');
+    const lower = raw.toLowerCase();
+    if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return \`Phone/SMS setup error: \${raw}\`;
+    if (lower.includes('rate limit') || lower.includes('too many')) return 'Too many attempts. Please wait a little before requesting another code.';
+    if (lower.includes('token') || lower.includes('otp') || lower.includes('invalid')) return 'That verification code is incorrect or expired. Please request a new code.';
+    if (lower.includes('captcha')) return 'Verification protection is required before another code can be sent.';
+    return raw;
+  }`;
+          const newFn=`function friendlyError(error, phase = 'general') {
+    const raw = String(error?.message || error || 'Something went wrong. Please try again.');
+    const lower = raw.toLowerCase();
+    if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return \`Phone/SMS setup error: \${raw}\`;
+    if (lower.includes('rate limit') || lower.includes('too many')) return 'Too many attempts. Please wait a little before requesting another code.';
+    if (lower.includes('captcha')) return 'Verification protection is required before another code can be sent.';
+    if (phase === 'verify' && (lower.includes('token') || lower.includes('otp') || lower.includes('invalid') || lower.includes('expired'))) return 'That verification code is incorrect or expired. Please request a new code.';
+    if (phase === 'send') return \`Could not send verification code: \${raw}\`;
+    return raw;
+  }`;
+          if(!s.includes(oldFn)) throw new Error('friendlyError block not found');
+          s=s.replace(oldFn,newFn);
+          const oldSend="setError(friendlyError(error));\n      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend code' : 'Send verification code'; }";
+          const newSend="setError(friendlyError(error, 'send'));\n      if (btn) { btn.disabled = false; btn.textContent = isResend ? 'Resend code' : 'Send verification code'; }";
+          if(!s.includes(oldSend)) throw new Error('send error mapping not found');
+          s=s.replace(oldSend,newSend);
+          const oldVerify="setError(friendlyError(error));\n      if (btn) { btn.disabled = false; btn.textContent = 'Verify & continue'; }";
+          const newVerify="setError(friendlyError(error, 'verify'));\n      if (btn) { btn.disabled = false; btn.textContent = 'Verify & continue'; }";
+          if(!s.includes(oldVerify)) throw new Error('verify error mapping not found');
+          s=s.replace(oldVerify,newVerify);
+          fs.writeFileSync(p,s);
+          NODE
+      - name: Validate
+        run: |
+          node --check auth.js
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add auth.js
+          git commit -m "Fix OTP send error diagnostics"
+          git push origin HEAD:fix/otp-send-error

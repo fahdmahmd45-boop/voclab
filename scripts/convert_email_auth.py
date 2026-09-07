@@ -24,7 +24,7 @@ replacement = """  function normalizeEmail(raw) {
     return `${shown}@${domain}`;
   }
 """
-s, n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+s, n = re.subn(pattern, lambda _m: replacement, s, count=1, flags=re.S)
 if n != 1:
     raise SystemExit('Could not replace phone normalization helpers')
 
@@ -66,7 +66,7 @@ login_replacement = """    body.innerHTML = `
   }
 
   async function sendOtp(rawEmail, isResend = false) {"""
-s, n = login_pattern.subn(login_replacement, s, count=1)
+s, n = login_pattern.subn(lambda _m: login_replacement, s, count=1)
 if n != 1:
     raise SystemExit('Could not replace phone login form')
 

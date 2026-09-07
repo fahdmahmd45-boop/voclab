@@ -669,7 +669,7 @@ function renderMcq(){
   if(qI>=qDeck.length){el.innerHTML=levelStatHTML()+`<div class="done"><div class="big">${DONE_ICO}</div><p>Score: <b>${qScore}</b> / ${qDeck.length}</p><p class="praise">${praise()}</p><button class="next" style="max-width:250px;margin:16px auto 0;display:block" onclick="startMcq()">Try again</button></div>`;return}
   qLock=false;
   const w=qDeck[qI];
-  const wrong=shuffle(allWords().filter(x=>x[3]!==w[3])).slice(0,3);
+  const wrong=shuffle(qDeck.filter(x=>x[3]!==w[3])).slice(0,3);
   const opts=shuffle([w,...wrong]);
   el.innerHTML=levelStatHTML()+`<div class="qwrap">
     <div class="qword">

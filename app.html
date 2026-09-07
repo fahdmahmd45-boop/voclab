@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VocLab</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#f5f3ee}
+    body{opacity:0}
+  </style>
+</head>
+<body>
+<script>
+(async function(){
+  try{
+    const response=await fetch('/index.html?v=source',{cache:'no-store'});
+    if(!response.ok)throw new Error('Could not load VocLab');
+    let html=await response.text();
+    const patch='<script src="/voclab-ai-patch.js?v=20260907"><\\/script></body>';
+    if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,patch);
+    else html+='\n<script src="/voclab-ai-patch.js?v=20260907"><\\/script>';
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(e){
+    location.replace('/index.html');
+  }
+})();
+</script>
+</body>
+</html>

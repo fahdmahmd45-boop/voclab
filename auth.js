@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const SUPABASE_URL = 'https://hknecvleujjdyogtwaar.supabase.co';
+  const SUPABASE_URL = 'https://hknecvleujjdyoqtwaar.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_9GOPoqC3kpfLVcvQoSXXFQ_gXcGK6om';
   const STATE_PREFIX = 'engl01_';
   const BOUND_USER_KEY = 'voclab_bound_user';

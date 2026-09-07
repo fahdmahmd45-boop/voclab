@@ -1,0 +1,44 @@
+name: Show auth provider error
+
+on:
+  push:
+    branches:
+      - fix/show-auth-provider-error
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/show-auth-provider-error
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Patch auth error message
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='auth.js';
+          let s=fs.readFileSync(p,'utf8');
+          const old="if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return 'Phone login is not enabled yet. Finish the SMS provider setup in Supabase first.';";
+          const neu="if (lower.includes('phone provider') || lower.includes('sms provider') || lower.includes('unsupported phone')) return `Phone/SMS setup error: ${raw}`;";
+          if(!s.includes(old)) throw new Error('Expected auth provider error mapping not found');
+          s=s.replace(old,neu);
+          fs.writeFileSync(p,s);
+          NODE
+      - name: Validate
+        run: |
+          node --check auth.js
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add auth.js
+          git commit -m "Show exact phone auth provider errors"
+          git push origin HEAD:fix/show-auth-provider-error

@@ -129,7 +129,7 @@ async function authenticateAndConsumeQuota(req) {
 
   let quotaResponse;
   try {
-    quotaResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_voclab_ai_quota`, {
+    quotaResponse = await fetch(`${SUPABASE_URL}/functions/v1/consume-ai-quota`, {
       method: 'POST',
       headers: commonHeaders,
       body: '{}'

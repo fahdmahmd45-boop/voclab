@@ -1,5 +1,3 @@
-const crypto = require('crypto');
-
 const MAX_FILE_BYTES = 2500000;
 const MAX_FILE_WORDS = 40;
 const DAILY_VISITOR_LIMIT = 10;
@@ -7,8 +5,8 @@ const MINUTE_IP_LIMIT = 5;
 const DAILY_IP_SAFETY_LIMIT = 100;
 const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx','ppt','pptx','xls','xlsx']);
 
-const VISITOR_COOKIE = 'voclab_ai_visitor';
-const USAGE_COOKIE = 'voclab_ai_usage';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hknecvleujjdyoqtwaar.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_9GOPoqC3kpfLVcvQoSXXFQ_gXcGK6om';
 
 const schema = {
   type: 'object',
@@ -39,24 +37,6 @@ const schema = {
 const recentByIp = new Map();
 const dailyByIp = new Map();
 
-function parseCookies(header) {
-  const out = {};
-  for (const part of String(header || '').split(';')) {
-    const i = part.indexOf('=');
-    if (i < 1) continue;
-    const key = part.slice(0, i).trim();
-    let value = part.slice(i + 1).trim();
-    try { value = decodeURIComponent(value); } catch {}
-    if (key) out[key] = value;
-  }
-  return out;
-}
-
-function cookieLine(name, value, req, maxAge = 31536000) {
-  const secure = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
-  return `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`;
-}
-
 function todayUtc() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -65,41 +45,6 @@ function secondsUntilUtcMidnight() {
   const now = new Date();
   const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
   return Math.max(60, Math.ceil((next - now.getTime()) / 1000));
-}
-
-function signUsage(day, count, visitorId) {
-  return crypto
-    .createHmac('sha256', process.env.OPENAI_API_KEY)
-    .update(`${day}|${count}|${visitorId}`)
-    .digest('hex');
-}
-
-function readSignedUsage(raw, visitorId) {
-  const day = todayUtc();
-  const parts = String(raw || '').split('.');
-  if (parts.length !== 3 || parts[0] !== day) return 0;
-  const count = Number(parts[1]);
-  if (!Number.isInteger(count) || count < 0 || count > 100000) return 0;
-  const expected = signUsage(day, count, visitorId);
-  const provided = parts[2];
-  if (provided.length !== expected.length) return 0;
-  try {
-    if (!crypto.timingSafeEqual(Buffer.from(provided, 'utf8'), Buffer.from(expected, 'utf8'))) return 0;
-  } catch {
-    return 0;
-  }
-  return count;
-}
-
-function makeUsageCookie(count, visitorId) {
-  const day = todayUtc();
-  return `${day}.${count}.${signUsage(day, count, visitorId)}`;
-}
-
-function getVisitor(cookies) {
-  const existing = String(cookies[VISITOR_COOKIE] || '');
-  if (/^[a-z0-9-]{20,80}$/i.test(existing)) return existing;
-  return crypto.randomUUID();
 }
 
 function minuteRateLimited(ip) {
@@ -156,9 +101,74 @@ function cleanWords(words, limit) {
   return out;
 }
 
+async function authenticateAndConsumeQuota(req) {
+  const auth = String(req.headers.authorization || '').trim();
+  if (!/^Bearer\s+\S+$/i.test(auth)) {
+    return { ok: false, status: 401, error: 'Sign in to use AI.', code: 'AUTH_REQUIRED' };
+  }
+
+  const commonHeaders = {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: auth,
+    'Content-Type': 'application/json'
+  };
+
+  let userResponse;
+  try {
+    userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: commonHeaders });
+  } catch {
+    return { ok: false, status: 503, error: 'Account verification is temporarily unavailable.', code: 'AUTH_UNAVAILABLE' };
+  }
+  if (!userResponse.ok) {
+    return { ok: false, status: 401, error: 'Your sign-in session is invalid or expired. Please sign in again.', code: 'AUTH_INVALID' };
+  }
+  const user = await userResponse.json().catch(() => null);
+  if (!user || !user.id) {
+    return { ok: false, status: 401, error: 'Your sign-in session is invalid or expired. Please sign in again.', code: 'AUTH_INVALID' };
+  }
+
+  let quotaResponse;
+  try {
+    quotaResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_voclab_ai_quota`, {
+      method: 'POST',
+      headers: commonHeaders,
+      body: '{}'
+    });
+  } catch {
+    return { ok: false, status: 503, error: 'AI usage protection is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' };
+  }
+  if (!quotaResponse.ok) {
+    console.error('Quota RPC failed', quotaResponse.status, await quotaResponse.text().catch(() => ''));
+    return { ok: false, status: 503, error: 'AI usage protection is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' };
+  }
+  const raw = await quotaResponse.json().catch(() => null);
+  const quota = Array.isArray(raw) ? raw[0] : raw;
+  if (!quota || quota.allowed !== true) {
+    const code = String(quota?.code || 'AI_RATE_LIMIT');
+    const retryAfter = Math.max(1, Number(quota?.retry_after_seconds || 60));
+    return {
+      ok: false,
+      status: 429,
+      retryAfter,
+      remaining: Math.max(0, Number(quota?.remaining_today || 0)),
+      code,
+      error: code === 'DAILY_AI_LIMIT'
+        ? 'Daily AI limit reached. You can use AI up to 10 times per day. Please try again tomorrow.'
+        : 'Too many AI requests. Please wait a minute.'
+    };
+  }
+
+  return {
+    ok: true,
+    userId: user.id,
+    remaining: Math.max(0, Number(quota.remaining_today || 0))
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (!process.env.OPENAI_API_KEY) {
     return res.status(503).json({ error: 'AI is not configured yet.', code: 'OPENAI_API_KEY_MISSING' });
@@ -206,40 +216,25 @@ module.exports = async function handler(req, res) {
     content.push({ type: 'input_file', filename, file_data: fileData });
   }
 
-  const ip = String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
-  const cookies = parseCookies(req.headers.cookie);
-  const visitorId = getVisitor(cookies);
-  const usedToday = readSignedUsage(cookies[USAGE_COOKIE], visitorId);
-
+  const quota = await authenticateAndConsumeQuota(req);
   res.setHeader('X-RateLimit-Limit', String(DAILY_VISITOR_LIMIT));
-  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, DAILY_VISITOR_LIMIT - usedToday)));
-
-  if (usedToday >= DAILY_VISITOR_LIMIT) {
-    const retryAfter = secondsUntilUtcMidnight();
-    res.setHeader('Retry-After', String(retryAfter));
-    return res.status(429).json({
-      error: 'Daily AI limit reached. You can use AI up to 10 times per day. Please try again tomorrow.',
-      code: 'DAILY_AI_LIMIT'
-    });
+  if (!quota.ok) {
+    if (quota.retryAfter) res.setHeader('Retry-After', String(quota.retryAfter));
+    if (quota.remaining != null) res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
+    return res.status(quota.status).json({ error: quota.error, code: quota.code });
   }
+  res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
 
+  const ip = String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
   if (minuteRateLimited(ip)) {
     res.setHeader('Retry-After', '60');
-    return res.status(429).json({ error: 'Too many AI requests. Please wait a minute.', code: 'AI_RATE_LIMIT' });
+    return res.status(429).json({ error: 'Too many AI requests from this network. Please wait a minute.', code: 'AI_NETWORK_RATE_LIMIT' });
   }
-
   if (dailyIpRateLimited(ip)) {
     const retryAfter = secondsUntilUtcMidnight();
     res.setHeader('Retry-After', String(retryAfter));
     return res.status(429).json({ error: 'AI usage limit reached for this network today. Please try again tomorrow.', code: 'NETWORK_AI_LIMIT' });
   }
-
-  const nextDailyCount = usedToday + 1;
-  res.setHeader('Set-Cookie', [
-    cookieLine(VISITOR_COOKIE, visitorId, req),
-    cookieLine(USAGE_COOKIE, makeUsageCookie(nextDailyCount, visitorId), req, secondsUntilUtcMidnight() + 300)
-  ]);
-  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, DAILY_VISITOR_LIMIT - nextDailyCount)));
 
   try {
     const response = await fetch('https://api.openai.com/v1/responses', {
@@ -277,7 +272,7 @@ module.exports = async function handler(req, res) {
     try { parsed = JSON.parse(text); } catch { return res.status(502).json({ error: 'AI returned an unreadable response.' }); }
     const words = cleanWords(parsed.words, mode === 'file' ? MAX_FILE_WORDS : 1);
     if (!words.length) return res.status(422).json({ error: mode === 'file' ? 'No useful English vocabulary was found in this file.' : 'Could not build this vocabulary entry.' });
-    return res.status(200).json({ words, usage: { remaining_today: Math.max(0, DAILY_VISITOR_LIMIT - nextDailyCount), daily_limit: DAILY_VISITOR_LIMIT } });
+    return res.status(200).json({ words, usage: { remaining_today: quota.remaining, daily_limit: DAILY_VISITOR_LIMIT } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'AI service is temporarily unavailable.' });

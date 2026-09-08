@@ -1,7 +1,9 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium } from 'playwright-core';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright-core');
 
 const root = process.cwd();
 const cfg = JSON.parse(fs.readFileSync(path.join(root,'vercel.json'),'utf8'));

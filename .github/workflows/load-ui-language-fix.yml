@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'assets/ui-language-fix.js'
+      - '.github/workflows/load-ui-language-fix.yml'
 
 permissions:
   contents: write

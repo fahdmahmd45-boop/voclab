@@ -489,9 +489,10 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.min.js';
       script.async = true;
       script.crossOrigin = 'anonymous';
+      script.integrity = 'sha384-EyR2P0dlmjnEGcm9xcjdAn0VedZpRHEwDLP9oSS6wYMvzHBHkUrvgonveazJ/sSx';
       script.dataset.voclabSupabase = '1';
       script.onload = resolve;
       script.onerror = () => reject(new Error('Could not load account service.'));

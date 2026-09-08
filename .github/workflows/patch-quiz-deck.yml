@@ -1,0 +1,58 @@
+name: Patch quiz deck direct start
+on:
+  push:
+    branches: [fix/quiz-deck-direct-start]
+    paths: ['.github/workflows/patch-quiz-deck.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/quiz-deck-direct-start
+      - name: Patch quiz deck selection
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = """function pickCat(id){
+  picked=true;listVisible=0;
+  if(id==='L'||id==='R'){fSrc.value=id;rebuildUnits();fUnit.value='all'}
+  else if(id==='MY'){fSrc.value='M';rebuildUnits();fUnit.value='all'}
+  else if(id[0]==='C'){fSrc.value='C';rebuildUnits();fUnit.value=id}
+  else{fSrc.value='O';rebuildUnits();fUnit.value=id}
+  goTab('list');
+}"""
+          new = """function pickCat(id){
+  picked=true;listVisible=0;
+  if(id==='L'||id==='R'){fSrc.value=id;rebuildUnits();fUnit.value='all'}
+  else if(id==='MY'){fSrc.value='M';rebuildUnits();fUnit.value='all'}
+  else if(id[0]==='C'){fSrc.value='C';rebuildUnits();fUnit.value=id}
+  else{fSrc.value='O';rebuildUnits();fUnit.value=id}
+  // If the deck was chosen from the Quiz screen, start that quiz immediately.
+  // startMcq() snapshots pool() into qDeck, so every distractor stays inside this deck.
+  if(curTab==='mcq'){
+    startMcq();
+    try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}
+    return;
+  }
+  goTab('list');
+}"""
+          if old not in s:
+              raise SystemExit('pickCat block not found; refusing to patch')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          git diff --check
+          grep -n "If the deck was chosen from the Quiz screen" index.html
+      - name: Commit patch
+        run: |
+          git config user.name "voclab-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Start quiz immediately after deck selection"
+          git push origin HEAD:fix/quiz-deck-direct-start

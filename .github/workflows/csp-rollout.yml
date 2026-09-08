@@ -27,7 +27,7 @@ jobs:
           python3 -m json.tool vercel.json >/dev/null
           ! grep -R -nE '\beval\s*\(|\bFunction\s*\(' --include='*.js' . --exclude-dir=.git
           ! grep -nEi 'javascript\s*:' index.html
-          ! python3 - <<'PY'
+          python3 - <<'PY'
           import re
           s=open('index.html',encoding='utf-8').read()
           bad=[]

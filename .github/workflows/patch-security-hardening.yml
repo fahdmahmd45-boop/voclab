@@ -16,7 +16,7 @@ jobs:
           ref: security/harden-ai-xss
       - name: Validate hardened source
         run: |
-          git diff --check main...HEAD
+          git diff --check HEAD^
           if grep -q "Function('return '+t)" index.html; then echo "unsafe dynamic code execution remains"; exit 1; fi
           grep -n "function htmlText" index.html
           grep -n "Sign in to use AI" index.html

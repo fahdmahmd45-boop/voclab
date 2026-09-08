@@ -1,0 +1,60 @@
+name: CSP hardening rollout
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/csp_harden.py'
+      - 'tools/csp_smoke.mjs'
+      - '.github/workflows/csp-rollout.yml'
+permissions:
+  contents: write
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Apply CSP hardening
+        run: python3 tools/csp_harden.py
+      - name: Validate JavaScript
+        run: |
+          node --check auth.js
+          node --check api/ai.js
+          for f in assets/inline-script-*.js; do node --check "$f"; done
+      - name: Validate security config
+        run: |
+          python3 -m json.tool vercel.json >/dev/null
+          ! grep -R -nE '\beval\s*\(|\bFunction\s*\(' --include='*.js' . --exclude-dir=.git
+          ! grep -nEi 'javascript\s*:' index.html
+          ! python3 - <<'PY'
+          import re
+          s=open('index.html',encoding='utf-8').read()
+          bad=[]
+          for m in re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.I|re.S):
+              if not re.search(r'\bsrc\s*=',m.group(1),re.I): bad.append(m.group(0)[:80])
+          raise SystemExit(1 if bad else 0)
+          PY
+      - name: Install browser test dependency
+        run: |
+          mkdir -p /tmp/pw
+          cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright-core@1.55.0
+      - name: Run CSP browser smoke test
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        run: node tools/csp_smoke.mjs
+      - name: Validate diff
+        run: git diff --check
+      - name: Commit hardened app and clean migration helpers
+        run: |
+          rm -f tools/csp_harden.py tools/csp_smoke.mjs .github/workflows/csp-rollout.yml
+          rmdir tools 2>/dev/null || true
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "fahdmahmd45-boop"
+          git config user.email "fahdmahmd45@gmail.com"
+          git add -A
+          git commit -m "Externalize scripts and enforce compatible CSP"
+          git push origin main

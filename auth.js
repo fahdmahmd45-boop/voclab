@@ -180,16 +180,16 @@
     if (pendingEmail) {
       body.innerHTML = `
         <div class="voc-auth-title" id="vocAuthDialogTitle">Enter your code</div>
-        <div class="voc-auth-sub">We sent a 6-digit verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.</div>
+        <div class="voc-auth-sub">We sent a verification code to <strong>${escapeHtml(maskEmail(pendingEmail))}</strong>.</div>
         <label class="voc-auth-label" for="vocOtp">Verification code</label>
-        <input class="voc-auth-input voc-auth-otp" id="vocOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="Verification code">
+        <input class="voc-auth-input voc-auth-otp" id="vocOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••••••" aria-label="Verification code">
         <button type="button" class="voc-auth-primary" id="vocVerifyBtn">Verify & continue</button>
         <button type="button" class="voc-auth-secondary" id="vocResendBtn">${resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend code'}</button>
         <button type="button" class="voc-auth-link" id="vocChangeEmail" style="margin-top:14px">Use a different email</button>
         <div class="voc-auth-error" id="vocAuthError"></div>
       `;
       const otp = body.querySelector('#vocOtp');
-      otp.addEventListener('input', () => { otp.value = otp.value.replace(/\D/g, '').slice(0, 6); if (otp.value.length === 6) verifyOtp(); });
+      otp.addEventListener('input', () => { otp.value = otp.value.replace(/\D/g, '').slice(0, 8); });
       otp.addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyOtp(); });
       body.querySelector('#vocVerifyBtn').addEventListener('click', verifyOtp);
       const resend = body.querySelector('#vocResendBtn');
@@ -201,12 +201,12 @@
 
     body.innerHTML = `
       <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with email</div>
-      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a 6-digit verification code to your email.</div>
+      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a verification code to your email.</div>
       <label class="voc-auth-label" for="vocEmail">Email address</label>
       <div class="voc-auth-phone-wrap" style="grid-template-columns:1fr"><input class="voc-auth-input" id="vocEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address"></div>
       <button type="button" class="voc-auth-primary" id="vocSendBtn">Send verification code</button>
       <div class="voc-auth-error" id="vocAuthError"></div>
-      <div class="voc-auth-note">Check your inbox and spam folder for the 6-digit code. New users are created automatically after verification.</div>
+      <div class="voc-auth-note">Check your inbox and spam folder for the verification code. New users are created automatically after verification.</div>
     `;
     const email = body.querySelector('#vocEmail');
     email.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(email.value); });
@@ -238,9 +238,9 @@
   async function verifyOtp() {
     if (!client || !pendingEmail) return;
     const input = document.getElementById('vocOtp');
-    const token = String(input?.value || '').replace(/\D/g, '').slice(0, 6);
-    if (token.length !== 6) {
-      setError('Enter the 6-digit verification code.');
+    const token = String(input?.value || '').replace(/\D/g, '').slice(0, 8);
+    if (token.length < 6 || token.length > 8) {
+      setError('Enter the complete verification code from your email.');
       return;
     }
     const btn = document.getElementById('vocVerifyBtn');
@@ -259,13 +259,21 @@
     renderAuthBody();
   }
 
+  function updateResendButton() {
+    const resend = document.getElementById('vocResendBtn');
+    if (!resend) return;
+    resend.disabled = resendSeconds > 0;
+    resend.textContent = resendSeconds > 0 ? `Resend in ${resendSeconds}s` : 'Resend code';
+  }
+
   function startResendTimer() {
     stopResendTimer();
     resendSeconds = 60;
+    updateResendButton();
     resendTimer = setInterval(() => {
-      resendSeconds -= 1;
+      resendSeconds = Math.max(0, resendSeconds - 1);
+      updateResendButton();
       if (resendSeconds <= 0) stopResendTimer();
-      if (!session?.user && pendingEmail && document.getElementById('vocAuthOverlay')?.classList.contains('open')) renderAuthBody();
     }, 1000);
   }
 

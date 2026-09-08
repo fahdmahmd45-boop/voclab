@@ -1,0 +1,118 @@
+name: Fix mobile viewport fit
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-mobile-viewport.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Make every panel fit the browser viewport
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='/* VOC_VIEWPORT_FIT_V1 */'
+          if marker in s:
+              raise SystemExit('viewport fit block already exists')
+          block=r'''
+          /* VOC_VIEWPORT_FIT_V1: mobile pages must never exceed the browser viewport */
+          html,body{max-width:100%;overflow-x:hidden}
+          .hwrap,.hbtns,main,.panel{min-width:0}
+          @supports (overflow:clip){html,body{overflow-x:clip}}
+          @media(max-width:640px){
+            header{width:100%;max-width:100%;padding-inline:10px}
+            .hwrap{width:100%;max-width:100%;min-width:0;gap:7px}
+            .hwrap>h1{min-width:0;flex:1 1 auto}
+            .hbtns{min-width:0;gap:5px;flex:0 1 auto}
+            .prog{flex:0 0 auto;min-width:0}
+            main{width:100%;max-width:100%;min-width:0;padding-inline:12px}
+            .tabs,.panel,.home,.fcwrap,.qwrap,.dwrap,.myform,.fcard,.fcard3,.qword,.tprompt,.dcard,.row,.selbar{width:100%;max-width:100%;min-width:0}
+            .fcbtns,.dsearch,.mygrid,.selactions,.filters,.rtop,.dhead{max-width:100%;min-width:0}
+            input,select,textarea,button{max-width:100%;min-width:0}
+            img,canvas,video{max-width:100%;height:auto}
+            .fcard .word,.qword .word,.dword,.row .w{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+          }
+          @media(max-width:430px){
+            .hwrap{gap:5px}
+            .hbtns{gap:4px}
+            .iconbtn{padding:8px 9px}
+            #btnDrawer span{display:none}
+            h1 small{font-size:9px;letter-spacing:.11em}
+            .prog{font-size:11px}
+          }
+          @media(max-width:360px){
+            h1 small{display:none}
+            .prog>span:last-of-type{display:none}
+          }
+          '''
+          if '</style>' not in s: raise SystemExit('style end not found')
+          s=s.replace('</style>',block+'\n</style>',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Validate source
+        run: |
+          grep -F 'VOC_VIEWPORT_FIT_V1' index.html
+          grep -F '#btnDrawer span{display:none}' index.html
+          git diff --check
+      - name: Install browser test dependency
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright-core@1.55.0
+      - name: Test viewport overflow on common phone widths
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        run: |
+          cat > /tmp/viewport-test.cjs <<'JS'
+          const http=require('http'), fs=require('fs'), path=require('path');
+          const {chromium}=require('/tmp/pw/node_modules/playwright-core');
+          const root=process.cwd();
+          const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
+          const cfg=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+          const csp=cfg.headers.flatMap(x=>x.headers||[]).find(h=>String(h.key).toLowerCase()==='content-security-policy')?.value;
+          const server=http.createServer((req,res)=>{
+            let pn=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname); if(pn==='/')pn='/index.html';
+            const f=path.normalize(path.join(root,pn)); if(!f.startsWith(root)||!fs.existsSync(f)){res.writeHead(404);return res.end('x')}
+            if(csp)res.setHeader('Content-Security-Policy',csp); res.setHeader('Content-Type',mime[path.extname(f)]||'application/octet-stream'); fs.createReadStream(f).pipe(res);
+          });
+          server.listen(4173,'127.0.0.1',async()=>{
+            const exe=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
+            if(!exe)throw new Error('No Chrome');
+            const browser=await chromium.launch({headless:true,executablePath:exe,args:['--no-sandbox']});
+            const failures=[];
+            for(const width of [320,360,375,390,414,430]){
+              const page=await browser.newPage({viewport:{width,height:844}}); page.setDefaultTimeout(2500);
+              await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:15000}); await page.waitForTimeout(1200);
+              await page.evaluate(()=>{const e=document.getElementById('btnExit'); if(e)e.style.display='inline-flex'});
+              const labels=['Home','AI Search','Browse','Flashcards','Quiz','Spelling','Add Word'];
+              for(const label of labels){
+                const b=page.getByRole('button',{name:label,exact:true}); if(await b.count())await b.first().click().catch(()=>{}); await page.waitForTimeout(100);
+                const m=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,bw:document.body.scrollWidth}));
+                if(m.sw>m.cw+1||m.bw>m.cw+1)failures.push(`${width}px ${label}: html ${m.sw}/${m.cw}, body ${m.bw}`);
+              }
+              await page.close();
+            }
+            await browser.close(); server.close();
+            if(failures.length){console.error(failures.join('\n'));process.exit(1)}
+            console.log('All mobile viewport overflow tests passed.');
+          });
+          JS
+          timeout 90s node /tmp/viewport-test.cjs
+      - name: Commit viewport fix and clean helper
+        run: |
+          rm -f .github/workflows/fix-mobile-viewport.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "fahdmahmd45-boop"
+          git config user.email "fahdmahmd45@gmail.com"
+          git add -A
+          git commit -m "Fit every mobile panel to browser viewport"
+          git push origin main

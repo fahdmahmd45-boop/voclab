@@ -1325,6 +1325,13 @@ function pickCat(id){
   else if(id==='MY'){fSrc.value='M';rebuildUnits();fUnit.value='all'}
   else if(id[0]==='C'){fSrc.value='C';rebuildUnits();fUnit.value=id}
   else{fSrc.value='O';rebuildUnits();fUnit.value=id}
+  // If the deck was chosen from the Quiz screen, start that quiz immediately.
+  // startMcq() snapshots pool() into qDeck, so every distractor stays inside this deck.
+  if(curTab==='mcq'){
+    startMcq();
+    try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}
+    return;
+  }
   goTab('list');
 }
 

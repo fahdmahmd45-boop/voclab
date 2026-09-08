@@ -240,6 +240,27 @@ select:focus,.search:focus,.tin:focus,.myin:focus{border-color:var(--amber)}
 @keyframes wig{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
 body,header,.row,.fcard,.qword,.tprompt,.opt,.tab,select,.search,.tin,.myin,.drawer,.iconbtn,.hcard,.hprog{transition-property:background-color,color,border-color;transition-duration:.3s}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* VOC_MOBILE_TABS_GRID_V1: keep every feature visible without horizontal scrolling */
+@media(max-width:640px){
+  .tabs{
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:3px;
+    overflow:visible;
+  }
+  .tab{
+    grid-column:span 3;
+    min-width:0;
+    width:100%;
+    padding:9px 3px;
+    font-size:11px;
+    line-height:1.2;
+  }
+  .tabs .tab:nth-child(n+5){grid-column:span 4}
+  .home-tab{gap:4px}
+  .home-tab svg{width:14px;height:14px}
+}
+
 @media(max-width:540px){
   .row .w{font-size:17.5px}
   .fcard .word{font-size:36px}

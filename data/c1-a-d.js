@@ -206,7 +206,7 @@ collective\tadj\tجماعي\tThe decision reflects our collective responsibility
 collision\tn\tتصادم\tTwo vehicles were damaged in the collision.
 colonial\tadj\tاستعماري\tThe museum explores the country's colonial history.
 columnist\tn\tكاتب عمود\tThe columnist writes about economic policy.
-combat\tn\tمكافحة / قتال\tThe campaign aims to combat online fraud.
+combat\tn\tقتال / مواجهة\tThe unit received training for close combat.
 commence\tv\tيبدأ\tConstruction will commence next month.
 commentary\tn\tتعليق / تحليل\tThe documentary includes expert commentary.
 commentator\tn\tمعلّق / محلل\tA political commentator discussed the election results.

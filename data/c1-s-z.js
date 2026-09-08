@@ -146,7 +146,7 @@ symbolic\tadj\tرمزي\tThe gesture was largely symbolic.
 syndrome\tn\tمتلازمة\tDoctors identified a rare genetic syndrome.
 synthesis\tn\tتركيب / توليف\tThe report provides a synthesis of recent research.
 systematic\tadj\tمنهجي / منظم\tThey carried out a systematic review of the evidence.
-tackle\tn\tعدة / معالجة\tThe team needs a new approach to tackle the issue.
+tackle\tn\tعدة / معدات\tThe fishing tackle was stored in a box.
 tactic\tn\tتكتيك / أسلوب\tThe company changed its marketing tactics.
 tactical\tadj\tتكتيكي\tThe coach made a tactical adjustment.
 taxpayer\tn\tدافع ضرائب\tThe project will cost taxpayers millions.

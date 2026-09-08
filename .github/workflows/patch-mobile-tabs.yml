@@ -1,0 +1,67 @@
+name: Patch mobile tabs
+
+on:
+  push:
+    branches:
+      - feat/mobile-tabs-visible
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add temporary mobile tabs patch workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mobile-tabs-visible
+
+      - name: Make every feature visible on phones
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          marker = 'VOC_MOBILE_TABS_GRID_V1'
+          anchor = '@media(max-width:540px){\n  .row .w{font-size:17.5px}'
+          css = '''/* VOC_MOBILE_TABS_GRID_V1: keep every feature visible without horizontal scrolling */
+          @media(max-width:640px){
+            .tabs{
+              display:grid;
+              grid-template-columns:repeat(12,minmax(0,1fr));
+              gap:3px;
+              overflow:visible;
+            }
+            .tab{
+              grid-column:span 3;
+              min-width:0;
+              width:100%;
+              padding:9px 3px;
+              font-size:11px;
+              line-height:1.2;
+            }
+            .tabs .tab:nth-child(n+5){grid-column:span 4}
+            .home-tab{gap:4px}
+            .home-tab svg{width:14px;height:14px}
+          }
+
+          '''
+
+          if marker not in text:
+              if anchor not in text:
+                  raise SystemExit('Could not find mobile CSS anchor')
+              text = text.replace(anchor, css + anchor, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          grep -q 'VOC_MOBILE_TABS_GRID_V1' index.html
+          grep -q 'grid-template-columns:repeat(12,minmax(0,1fr))' index.html
+
+          git config user.name "voclab-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/patch-mobile-tabs.yml
+          git commit -m "Show all feature tabs on mobile"
+          git push origin feat/mobile-tabs-visible

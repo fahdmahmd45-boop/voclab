@@ -1,0 +1,158 @@
+name: Apply AI search
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ai-search-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch AI search and pronunciation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          # ---- index.html ----
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace('data-p="dict">Dictionary</button>', 'data-p="dict">AI Search</button>', 1)
+
+          old_speak = "function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.88;speechSynthesis.speak(u)}catch(e){}}"
+          new_speak = """function speak(t,lang='en-US'){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(t);u.lang=lang;u.rate=.88;
+    const voices=speechSynthesis.getVoices();
+    const want=String(lang||'en-US').toLowerCase();
+    const exact=voices.find(v=>String(v.lang||'').toLowerCase()===want);
+    const regional=voices.find(v=>String(v.lang||'').toLowerCase().startsWith(want.split('-')[0]+'-')&&String(v.lang||'').toLowerCase().endsWith(want.slice(-2)));
+    if(exact||regional)u.voice=exact||regional;
+    speechSynthesis.speak(u)
+  }catch(e){}
+}"""
+          if old_speak not in s:
+              raise SystemExit('speak marker not found')
+          s = s.replace(old_speak, new_speak, 1)
+
+          start = s.find('/* ---------- dictionary lookup ---------- */')
+          end = s.find('/* ---------- home / categories / motivation ---------- */')
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit('dictionary section markers not found')
+
+          ai_search = r'''/* ---------- AI search ---------- */
+function renderDict(){
+  const el=document.getElementById('p-dict');
+  if(el.dataset.ready)return;el.dataset.ready='1';
+  el.innerHTML=`<div class="dwrap">
+    <div style="margin-bottom:14px">
+      <div style="font-family:var(--en);font-size:30px;font-weight:600;line-height:1.1">AI Search</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:6px">Search any English word or phrase. Get meaning, definition, examples, and American + British pronunciation.</div>
+    </div>
+    <div class="dsearch">
+      <input class="search" id="dIn" placeholder="Search a word or phrase..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="next dbtn" id="aiSearchBtn" onclick="aiSearchLookup()">Search</button>
+    </div>
+    <div id="dOut"><div class="empty">Try a word like “approach”, “figure out”, or “eventually”.</div></div>
+  </div>`;
+  document.getElementById('dIn').addEventListener('keydown',e=>{if(e.key==='Enter')aiSearchLookup()});
+}
+async function aiSearchLookup(){
+  const inp=document.getElementById('dIn'),q=(inp&&inp.value||'').trim();
+  const out=document.getElementById('dOut'),btn=document.getElementById('aiSearchBtn');
+  if(!q)return;
+  if(btn){btn.disabled=true;btn.textContent='Searching…'}
+  out.innerHTML='<div class="empty">Thinking…</div>';
+  try{
+    const d=await aiPost({mode:'word',word:q,dialects:true});
+    const x=d&&d.words&&d.words[0];
+    if(!x)throw {error:'No result returned.'};
+    window._aiSearchAdd=x;
+    const word=String(x.word||q),ex=String(x.example||'');
+    out.innerHTML=`<div class="dcard" style="margin-top:14px">
+      <div class="dhead" style="align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div style="min-width:0;flex:1">
+          <div class="dword">${aiSafe(word)}</div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px">
+            <span class="t">${aiSafe(TY[x.type]||x.type||'word')}</span>
+            ${x.ipa?`<span class="dphon" style="margin:0">${aiSafe(x.ipa)}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button class="iconbtn" onclick="speak('${esc(word)}','en-US')" title="American pronunciation">${SPK}<span>US</span></button>
+          <button class="iconbtn" onclick="speak('${esc(word)}','en-GB')" title="British pronunciation">${SPK}<span>UK</span></button>
+        </div>
+      </div>
+      ${x.arabic?`<div class="dar">${aiSafe(x.arabic)}</div>`:''}
+      ${x.english_definition?`<div class="dpos"><div class="dposname">definition</div><div style="font-family:var(--en);font-size:16px;line-height:1.6">${aiSafe(x.english_definition)}</div></div>`:''}
+      ${ex?`<div class="dpos"><div class="dposname">example</div><div class="dex" style="font-size:16px">“${aiSafe(ex)}” <button class="spk" onclick="speak('${esc(ex)}','en-US')" title="Hear example">${SPK}</button></div>${x.example_arabic?`<div style="font-family:var(--ar);direction:rtl;text-align:right;color:var(--mut);font-size:14px;line-height:1.7;margin-top:7px">${aiSafe(x.example_arabic)}</div>`:''}</div>`:''}
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:16px">
+        <select class="myin" id="aiSearchDeck" aria-label="Choose deck"><option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${d.id}">${aiSafe(d.t)}</option>`).join('')}</select>
+        <button class="next" id="aiSearchAddBtn" style="width:auto;margin:0;white-space:nowrap" onclick="aiSearchAdd(this)">Add to deck</button>
+      </div>
+    </div>`;
+  }catch(e){out.innerHTML=`<div class="empty">${aiSafe(aiErrorMessage(e))}</div>`}
+  finally{if(btn){btn.disabled=false;btn.textContent='Search'}}
+}
+function aiSearchAdd(btn){
+  const x=window._aiSearchAdd;if(!x)return;
+  const sel=document.getElementById('aiSearchDeck'),deck=sel?sel.value:'MY';
+  const word=String(x.word||'').trim();if(!word)return;
+  if(myWords.some(w=>w[0]===deck&&String(w[1]||'').toLowerCase()===word.toLowerCase())){
+    btn.textContent='Already in deck ✓';btn.disabled=true;return;
+  }
+  myWords.unshift([
+    deck,word,String(x.type||'n'),String(x.arabic||'—'),String(x.example||''),
+    String(x.ipa||''),String(x.english_definition||''),String(x.example_arabic||'')
+  ]);
+  saveMy();updProg();rebuildUnits();
+  btn.textContent='Added ✓';btn.disabled=true;
+}
+
+'''
+          s = s[:start] + ai_search + s[end:]
+          p.write_text(s, encoding='utf-8')
+
+          # ---- api/ai.js ----
+          p2 = Path('api/ai.js')
+          a = p2.read_text(encoding='utf-8')
+          original = 'text: `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`'
+          replacement = '''text: body.dialects === true
+        ? `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. In the ipa field, give BOTH pronunciations in exactly this compact format: "US /.../ · UK /.../" using accurate General American and standard British IPA. Then give a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
+        : `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`'''
+          if original not in a:
+              raise SystemExit('AI prompt marker not found')
+          a = a.replace(original, replacement, 1)
+          p2.write_text(a, encoding='utf-8')
+          PY
+
+          node --check api/ai.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>(.*?)</script>',s,re.S)
+          Path('/tmp/voclab-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/voclab-inline.js
+          git diff --check
+      - name: Commit feature and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "voclab-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html api/ai.js
+          git rm .github/workflows/ai-search-patch.yml
+          git commit -m "Replace dictionary with AI search and US UK pronunciation"
+          git push origin main

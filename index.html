@@ -502,7 +502,7 @@ function levelStatHTML(){
   if(!picked&&fSrc.value==='all')return'';
   const s=filteredProgress();
   return `<div class="lvlstat" style="margin:0 0 12px;padding:10px 14px;border:1px solid rgba(128,128,128,.25);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-    <span style="font-weight:700">${filterLabel()}</span>
+    <span style="font-weight:700">${htmlText(filterLabel())}</span>
     <span style="font-size:13px;opacity:.85">${s.k} / ${s.tot} mastered \u00b7 ${s.pct}%</span>
   </div>`;
 }
@@ -566,17 +566,26 @@ function sfxWrong(){_withAudio(()=>{_thud(300,0,.22,.16);_thud(220,.10,.28,.13)}
 function sfxClick(){_withAudio(()=>{_note(880,0,.06,.09)})}
 
 /* ---------- helpers ---------- */
-function hiWord(ex,word){ // bold the word inside the example
+function hiWord(ex,word){ // bold the word inside the example, while escaping untrusted text
+  ex=String(ex??'');word=String(word??'');
   const base=word.replace(/^\(in\)\s*/,'');
   const re=new RegExp('\\b('+base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\w*)','i');
-  return re.test(ex)?ex.replace(re,'<b>$1</b>'):ex;
+  const m=ex.match(re);
+  if(!m)return htmlText(ex);
+  const i=m.index||0;
+  return htmlText(ex.slice(0,i))+'<b>'+htmlText(m[0])+'</b>'+htmlText(ex.slice(i+m[0].length));
 }
-function blankWord(ex,word){ // hide the word in the example
+function blankWord(ex,word){ // hide the word in the example, while escaping untrusted text
+  ex=String(ex??'');word=String(word??'');
   const base=word.replace(/^\(in\)\s*/,'');
   const re=new RegExp('\\b('+base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\w*)','i');
-  return re.test(ex)?ex.replace(re,'<b>______</b>'):ex;
+  const m=ex.match(re);
+  if(!m)return htmlText(ex);
+  const i=m.index||0;
+  return htmlText(ex.slice(0,i))+'<b>______</b>'+htmlText(ex.slice(i+m[0].length));
 }
-function esc(s){return s.replace(/'/g,"\\'")}
+function htmlText(s){return String(s??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]))}
+function esc(s){return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/</g,'\\x3C').replace(/>/g,'\\x3E').replace(/&/g,'\\x26').replace(/\"/g,'&quot;')}
 function updProg(){
   const total=allWords().length,m=masteredCount();
   document.getElementById('pKnown').textContent=m;
@@ -674,11 +683,11 @@ function wordRowHTML(w,i,base){
       ${selectMode&&managed?`<label class="selcheck" title="Select word"><input type="checkbox" ${isSel?'checked':''} onclick="event.stopPropagation()" onchange="toggleWordSelect('${esc(sk)}',this.checked)"></label>`:''}
       <span class="idx" style="opacity:.5;font-size:12px;min-width:26px">#${num>0?num:i+1}</span>
       <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button>
-      <span class="w">${w[1]}</span>
-      ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${deckName(w[0])}</span>`:''}
-      <span class="t">${TY[w[2]]||w[2]}</span>
-      <span class="m">${w[3]}</span>
-      <span class="u">${unitLabel(w[0])}</span>
+      <span class="w">${htmlText(w[1])}</span>
+      ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
+      <span class="t">${htmlText(TY[w[2]]||w[2])}</span>
+      <span class="m">${htmlText(w[3])}</span>
+      <span class="u">${htmlText(unitLabel(w[0]))}</span>
       <button class="kbtn" onclick="toggleKnown('${esc(id)}')">${isK?'✓ Mastered':'Mark'}</button>
       ${managed&&!selectMode?`<button class="delbtn" onclick="delMy('${esc(w[1])}','${w[0]}')">✕</button>`:''}
     </div>
@@ -758,13 +767,13 @@ function renderCard(){
   el.innerHTML=levelStatHTML()+fcSizeBarHTML()+`<div class="fcwrap">
     <div class="fcard3${fcFlip?' flipped':''}" onclick="sfxFlip();fcFlip=!fcFlip;this.classList.toggle('flipped')">
       <div class="fcface fcard">
-        <div class="word">${w[1]}</div>
-        <div class="type">${TY[w[2]]||w[2]} · ${unitLabel(w[0])}</div>
+        <div class="word">${htmlText(w[1])}</div>
+        <div class="type">${htmlText(TY[w[2]]||w[2])} · ${htmlText(unitLabel(w[0]))}</div>
         <div class="hint">Tap to reveal</div>
       </div>
       <div class="fcface fcard fcb">
-        <div class="type">${w[1]}</div>
-        <div class="ans">${w[3]}</div>
+        <div class="type">${htmlText(w[1])}</div>
+        <div class="ans">${htmlText(w[3])}</div>
         ${w[4]?`<div class="fex"><button class="spk" onclick="event.stopPropagation();speak('${esc(w[4])}')" title="Speak sentence">${SPK}</button> ${hiWord(w[4],w[1])}</div>`:``}
       </div>
     </div>
@@ -806,11 +815,11 @@ function renderMcq(){
   const opts=shuffle([w,...wrong]);
   el.innerHTML=levelStatHTML()+`<div class="qwrap">
     <div class="qword">
-      <div class="word">${w[1]} <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button></div>
-      <div class="type">${TY[w[2]]||w[2]}</div>
+      <div class="word">${htmlText(w[1])} <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button></div>
+      <div class="type">${htmlText(TY[w[2]]||w[2])}</div>
       ${w[4]?`<div class="qex">${blankWord(w[4],w[1])}</div>`:``}
     </div>
-    ${opts.map(o=>`<button class="opt" data-r="${o[3]===w[3]?1:0}" onclick="pickOpt(this)">${o[3]}</button>`).join('')}
+    ${opts.map(o=>`<button class="opt" data-r="${o[3]===w[3]?1:0}" onclick="pickOpt(this)">${htmlText(o[3])}</button>`).join('')}
     <div class="score">Question ${qI+1} / ${qDeck.length} · Correct: ${qScore}</div>
   </div>`;
 }
@@ -832,8 +841,8 @@ function renderType(){
   const w=tDeck[tI];
   el.innerHTML=levelStatHTML()+`<div class="qwrap">
     <div class="tprompt">
-      <div class="m">${w[3]}</div>
-      <div class="type">${TY[w[2]]||w[2]} · type the English word</div>
+      <div class="m">${htmlText(w[3])}</div>
+      <div class="type">${htmlText(TY[w[2]]||w[2])} · type the English word</div>
       ${w[4]?`<div class="bex">${blankWord(w[4],w[1])}</div>`:``}
     </div>
     <input class="tin" id="tIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type here...">
@@ -861,7 +870,7 @@ function checkType(){
   }else{
     sfxWrong();
     inp.classList.add('wrong');feed.style.color='var(--bad)';
-    feed.innerHTML='✗ Correct answer: <span style="font-family:var(--en)">'+w[1]+'</span>';
+    feed.innerHTML='✗ Correct answer: <span style="font-family:var(--en)">'+htmlText(w[1])+'</span>';
     known.delete(kid(w));saveKnown();updProg();
     speak(w[1]);setTimeout(()=>{tI++;renderType()},2200);
   }
@@ -887,6 +896,7 @@ function aiSetBusy(on,text){
 }
 function aiErrorMessage(e){
   if(e&&e.code==='OPENAI_API_KEY_MISSING')return 'AI is ready in the site, but the server still needs the OpenAI API key.';
+  if(e&&(e.code==='AUTH_REQUIRED'||e.code==='AUTH_INVALID'))return 'Sign in to use AI.';
   return (e&&e.error)||'Could not generate vocabulary. Try again.';
 }
 async function aiPost(body){
@@ -1014,11 +1024,11 @@ function renderMy(){
     return `<div class="row ${isK?'known':''}">
       <div class="rtop">
         <button class="spk" onclick="speak('${esc(w[1])}')" title="Pronounce word">${SPK}</button>
-        <span class="w">${w[1]}</span>
+        <span class="w">${htmlText(w[1])}</span>
         ${w[5]?`<span class="t" style="font-family:var(--en);font-weight:400">${aiSafe(w[5])}</span>`:''}
-        ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${deckName(w[0])}</span>`:''}
-        <span class="t">${TY[w[2]]||w[2]}</span>
-        <span class="m">${w[3]}</span>
+        ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
+        <span class="t">${htmlText(TY[w[2]]||w[2])}</span>
+        <span class="m">${htmlText(w[3])}</span>
         <button class="kbtn" style="margin-left:auto" onclick="toggleKnownMy('${esc(id)}')">${isK?'✓ Mastered':'Mark'}</button>
         <button class="delbtn" onclick="delMy('${esc(w[1])}','${w[0]}')">✕</button>
       </div>
@@ -1037,7 +1047,7 @@ function parseWordText(txt){
   if(!/^\[\s*\[/.test(t))t='['+t+']';
   if(!t.endsWith(']'))t=t+']';
   let arr=null;
-  try{arr=JSON.parse(t)}catch(e){try{arr=Function('return '+t)()}catch(e2){arr=null}}
+  try{arr=JSON.parse(t)}catch(e){arr=null}
   if(Array.isArray(arr)&&typeof arr[0]==='string')arr=[arr];
   if(Array.isArray(arr)&&Array.isArray(arr[0]))return arr;
   /* fallback: simple lines "word, type, معنى, example" or "word - معنى" */
@@ -1272,7 +1282,7 @@ function cardsHTML(edit){
     const del=edit&&c.id!=='MY'?`<button class="delbadge" onclick="event.stopPropagation();${isCustom?`deleteDeck('${c.id}')`:`hideCard('${c.id}')`}">✕</button>`:'';
     return `<div class="hcard${edit?' wig':''}" style="animation-delay:${i*60}ms" onclick="${click}">
       ${del}
-      <span class="lvl ${c.cls}">${c.badge}</span><div class="ht">${c.t}</div><div class="hsub">${c.sub}</div>
+      <span class="lvl ${c.cls}">${htmlText(c.badge)}</span><div class="ht">${htmlText(c.t)}</div><div class="hsub">${htmlText(c.sub)}</div>
       <div class="hcount">${tot?k+' / '+tot+' mastered':'Add your first word'}</div>
       <div class="hbar"><i style="width:${tot?100*k/tot:0}%"></i></div>
     </div>`;

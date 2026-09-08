@@ -16,35 +16,12 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text()
-          old = """function pickCat(id){
-  picked=true;listVisible=0;
-  if(id==='L'||id==='R'){fSrc.value=id;rebuildUnits();fUnit.value='all'}
-  else if(id==='MY'){fSrc.value='M';rebuildUnits();fUnit.value='all'}
-  else if(id[0]==='C'){fSrc.value='C';rebuildUnits();fUnit.value=id}
-  else{fSrc.value='O';rebuildUnits();fUnit.value=id}
-  goTab('list');
-}"""
-          new = """function pickCat(id){
-  picked=true;listVisible=0;
-  if(id==='L'||id==='R'){fSrc.value=id;rebuildUnits();fUnit.value='all'}
-  else if(id==='MY'){fSrc.value='M';rebuildUnits();fUnit.value='all'}
-  else if(id[0]==='C'){fSrc.value='C';rebuildUnits();fUnit.value=id}
-  else{fSrc.value='O';rebuildUnits();fUnit.value=id}
-  // If the deck was chosen from the Quiz screen, start that quiz immediately.
-  // startMcq() snapshots pool() into qDeck, so every distractor stays inside this deck.
-  if(curTab==='mcq'){
-    startMcq();
-    try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}
-    return;
-  }
-  goTab('list');
-}"""
-          if old not in s:
-              raise SystemExit('pickCat block not found; refusing to patch')
-          s = s.replace(old, new, 1)
-          p.write_text(s)
+          p=Path('index.html')
+          s=p.read_text()
+          old="  goTab('list');\n}\n\n\n/* ---------- user name onboarding ---------- */"
+          new="  // If the deck was chosen from the Quiz screen, start that quiz immediately.\n  // startMcq() snapshots pool() into qDeck, so every distractor stays inside this deck.\n  if(curTab==='mcq'){\n    startMcq();\n    try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}\n    return;\n  }\n  goTab('list');\n}\n\n\n/* ---------- user name onboarding ---------- */"
+          if old not in s: raise SystemExit('pickCat tail not found; refusing to patch')
+          p.write_text(s.replace(old,new,1))
           PY
           git diff --check
           grep -n "If the deck was chosen from the Quiz screen" index.html

@@ -1,33 +1,31 @@
-name: Patch security hardening
+name: Validate security hardening
 on:
   push:
     branches:
       - security/harden-ai-xss
     paths:
-      - scripts/patch-security.py
       - .github/workflows/patch-security-hardening.yml
 permissions:
-  contents: write
+  contents: read
 jobs:
-  patch:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: security/harden-ai-xss
-      - name: Apply security patch
-        run: python3 scripts/patch-security.py
-      - name: Validate patch
+      - name: Validate hardened source
         run: |
-          git diff --check
+          git diff --check main...HEAD
+          if grep -q "Function('return '+t)" index.html; then echo "unsafe dynamic code execution remains"; exit 1; fi
           grep -n "function htmlText" index.html
           grep -n "Sign in to use AI" index.html
-          if grep -q "Function('return '+t)" index.html; then exit 1; fi
-      - name: Commit patch
-        run: |
-          git config user.name "voclab-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet && exit 0
-          git commit -m "Escape imported vocabulary and remove dynamic code execution"
-          git push origin HEAD:security/harden-ai-xss
+          node --check api/ai.js
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text=Path('index.html').read_text()
+          blocks=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>', text, re.S|re.I)
+          Path('/tmp/voclab-inline.js').write_text('\n;\n'.join(blocks))
+          PY
+          node --check /tmp/voclab-inline.js

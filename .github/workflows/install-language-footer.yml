@@ -1,0 +1,48 @@
+name: Install language and footer
+on:
+  push:
+    branches: [fix/language-footer]
+    paths:
+      - '.github/workflows/install-language-footer.yml'
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Install isolated loader
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          loader='<script src="/assets/language-footer.js"></script>'
+          anchor='<script src="/assets/deck-mode-navigation.js"></script>'
+          if loader in s:
+              raise SystemExit('loader already installed')
+          if s.count(anchor) != 1:
+              raise SystemExit('expected exactly one deck navigation anchor')
+          s=s.replace(anchor, anchor+'\n'+loader, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate isolated change
+        run: |
+          node --check assets/language-footer.js
+          node --check assets/deck-mode-navigation.js
+          grep -F '<script src="/assets/deck-mode-navigation.js"></script>' index.html
+          grep -F '<script src="/assets/language-footer.js"></script>' index.html
+          test "$(grep -F -c '<script src="/assets/language-footer.js"></script>' index.html)" = "1"
+          git diff --check
+      - name: Commit tested loader
+        run: |
+          rm -f .github/workflows/install-language-footer.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "voclab-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Enable language toggle and footer"
+          git push origin fix/language-footer

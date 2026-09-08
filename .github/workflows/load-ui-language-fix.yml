@@ -1,0 +1,43 @@
+name: Load Arabic language fix
+
+on:
+  push:
+    paths:
+      - 'assets/ui-language-fix.js'
+
+permissions:
+  contents: write
+
+jobs:
+  inject-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate language fix
+        run: node --check assets/ui-language-fix.js
+
+      - name: Add language fix script to the page
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          tag = '<script src="/assets/ui-language-fix.js" defer></script>'
+          if tag not in html:
+              html = html.replace('</body>', f'{tag}\n</body>')
+              path.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Commit index change
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Language fix already present."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189823+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Load Arabic language fix"
+          git push

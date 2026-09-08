@@ -177,7 +177,9 @@ module.exports = async function handler(req, res) {
     if (!word || word.length > 120) return res.status(400).json({ error: 'Enter a valid English word or phrase.' });
     content.push({
       type: 'input_text',
-      text: `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
+      text: body.dialects === true
+        ? `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. In the ipa field, give BOTH pronunciations in exactly this compact format: "US /.../ · UK /.../" using accurate General American and standard British IPA. Then give a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
+        : `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
     });
   } else {
     const filename = String(body.filename || '').replace(/[\\/]/g, '').slice(0, 160);

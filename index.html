@@ -293,7 +293,7 @@ button:active,.rchip:active,.kbtn:active,.opt:active,.tab:active{transform:scale
   
   <div class="tabs">
     <button class="tab on home-tab" data-p="home" title="Level selection"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Home</span></button>
-    <button class="tab" data-p="dict">Dictionary</button>
+    <button class="tab" data-p="dict">AI Search</button>
     <button class="tab" data-p="list">Browse</button>
     <button class="tab" data-p="cards">Flashcards</button>
     <button class="tab" data-p="mcq">Quiz</button>
@@ -473,7 +473,17 @@ function levelStatHTML(){
 }
 
 /* ---------- speech ---------- */
-function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.88;speechSynthesis.speak(u)}catch(e){}}
+function speak(t,lang='en-US'){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(t);u.lang=lang;u.rate=.88;
+    const voices=speechSynthesis.getVoices();
+    const want=String(lang||'en-US').toLowerCase();
+    const exact=voices.find(v=>String(v.lang||'').toLowerCase()===want);
+    if(exact)u.voice=exact;
+    speechSynthesis.speak(u)
+  }catch(e){}
+}
 
 /* ---------- sound effects (Web Audio API, no files needed) ---------- */
 let _actx=null;
@@ -1100,84 +1110,78 @@ document.addEventListener('touchend',e=>{
 },{passive:true});
 
 
-/* ---------- dictionary lookup ---------- */
-const POSMAP={noun:'n',verb:'v',adjective:'adj',adverb:'adv',pronoun:'pron',preposition:'prep',conjunction:'conj',interjection:'excl',exclamation:'excl',determiner:'det'};
+/* ---------- AI search ---------- */
 function renderDict(){
   const el=document.getElementById('p-dict');
   if(el.dataset.ready)return;el.dataset.ready='1';
   el.innerHTML=`<div class="dwrap">
-    <div class="dsearch">
-      <input class="search" id="dIn" placeholder="Type any English word..." autocomplete="off" autocapitalize="off">
-      <button class="next dbtn" onclick="dictLookup()">Search</button>
+    <div style="margin-bottom:14px">
+      <div style="font-family:var(--en);font-size:30px;font-weight:600;line-height:1.1">AI Search</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:6px">Search any English word or phrase. Get meaning, definition, examples, and American + British pronunciation.</div>
     </div>
-    <div id="dOut"><div class="empty">Look up any English word — definition, pronunciation, examples, synonyms and its Arabic meaning.</div></div>
+    <div class="dsearch">
+      <input class="search" id="dIn" placeholder="Search a word or phrase..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="next dbtn" id="aiSearchBtn" onclick="aiSearchLookup()">Search</button>
+    </div>
+    <div id="dOut"><div class="empty">Try a word like "approach", "figure out", or "eventually".</div></div>
   </div>`;
-  document.getElementById('dIn').addEventListener('keydown',e=>{if(e.key==='Enter')dictLookup()});
+  document.getElementById('dIn').addEventListener('keydown',e=>{if(e.key==='Enter')aiSearchLookup()});
 }
-async function dictLookup(){
-  const q=document.getElementById('dIn').value.trim().toLowerCase();
-  const out=document.getElementById('dOut');
+async function aiSearchLookup(){
+  const inp=document.getElementById('dIn'),q=(inp&&inp.value||'').trim();
+  const out=document.getElementById('dOut'),btn=document.getElementById('aiSearchBtn');
   if(!q)return;
-  out.innerHTML='<div class="empty">Searching\u2026</div>';
+  if(btn){btn.disabled=true;btn.textContent='Searching…'}
+  out.innerHTML='<div class="empty">Thinking…</div>';
   try{
-    const [dr,tr]=await Promise.all([
-      fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(q)).then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(q)+'&langpair=en|ar').then(r=>r.ok?r.json():null).catch(()=>null)
-    ]);
-    if(!dr||!Array.isArray(dr)||!dr.length){out.innerHTML=`<div class="empty">No results for \u201c${q}\u201d. Check the spelling and try again.</div>`;return}
-    const e0=dr[0];
-    let ar=tr&&tr.responseData&&tr.responseData.translatedText?tr.responseData.translatedText:'';
-    if(ar&&ar.toLowerCase()===q)ar='';
-    const phonObj=(e0.phonetics||[]).find(p=>p.text);
-    const phon=phonObj?phonObj.text:(e0.phonetic||'');
-    const audObj=(e0.phonetics||[]).find(p=>p.audio);
-    const audio=audObj?audObj.audio:'';
-    /* collect examples from ALL entries, not just the first */
-    let allEx=[];
-    dr.forEach(en=>(en.meanings||[]).forEach(m=>(m.definitions||[]).forEach(d=>{if(d.example&&!allEx.includes(d.example))allEx.push(d.example)})));
-    let firstEx=allEx[0]||'';
-    const meanings=(e0.meanings||[]).slice(0,3).map(m=>{
-      const defs=(m.definitions||[]).slice(0,2).map(d=>{
-        return `<li>${d.definition}${d.example?`<div class="dex">\u201c${d.example}\u201d</div>`:''}</li>`;
-      }).join('');
-      const syns=(m.synonyms||[]).slice(0,6);
-      return `<div class="dpos"><div class="dposname">${m.partOfSpeech}</div><ul>${defs}</ul>
-        ${syns.length?`<div class="dsyn">${syns.map(x=>`<button class="rchip" onclick="dictFrom('${esc(x)}')">${x}</button>`).join('')}</div>`:''}</div>`;
-    }).join('');
-    window._dictAdd={w:e0.word||q,ar:ar,ty:POSMAP[(e0.meanings&&e0.meanings[0]&&e0.meanings[0].partOfSpeech)||'']||'n',ex:firstEx};
-    const exHtml=allEx.length?`<div class="dpos"><div class="dposname">examples</div><ul>${allEx.slice(0,3).map(x=>`<li><div class="dex">\u201c${x}\u201d</div></li>`).join('')}</ul></div>`:`<div class="dpos" id="dExtraEx"><div class="dposname">examples</div><ul><li><div class="dex" style="opacity:.6">Loading examples\u2026</div></li></ul></div>`;
-    out.innerHTML=`<div class="dcard">
-      <div class="dhead">
-        <div><div class="dword">${e0.word||q}</div>${phon?`<div class="dphon">${phon}</div>`:''}</div>
-        <button class="iconbtn" onclick="${audio?`new Audio('${audio}').play()`:`speak('${esc(q)}')`}">${SPK}<span>Listen</span></button>
+    const d=await aiPost({mode:'word',word:q,dialects:true});
+    const x=d&&d.words&&d.words[0];
+    if(!x)throw {error:'No result returned.'};
+    window._aiSearchAdd=x;
+    const word=String(x.word||q),ex=String(x.example||'');
+    out.innerHTML=`<div class="dcard" style="margin-top:14px">
+      <div class="dhead" style="align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div style="min-width:0;flex:1">
+          <div class="dword">${aiSafe(word)}</div>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px">
+            <span class="t">${aiSafe(TY[x.type]||x.type||'word')}</span>
+            ${x.ipa?`<span class="dphon" style="margin:0">${aiSafe(x.ipa)}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button class="iconbtn" onclick="speak('${esc(word)}','en-US')" title="American pronunciation">${SPK}<span>US</span></button>
+          <button class="iconbtn" onclick="speak('${esc(word)}','en-GB')" title="British pronunciation">${SPK}<span>UK</span></button>
+        </div>
       </div>
-      ${ar?`<div class="dar">${ar}</div>`:''}
-      ${meanings}
-      ${exHtml}
-      <button class="next" style="margin-top:16px" onclick="dictAdd(this)">Add to my list</button>
+      ${x.arabic?`<div class="dar">${aiSafe(x.arabic)}</div>`:''}
+      ${x.english_definition?`<div class="dpos"><div class="dposname">definition</div><div style="font-family:var(--en);font-size:16px;line-height:1.6">${aiSafe(x.english_definition)}</div></div>`:''}
+      ${ex?`<div class="dpos"><div class="dposname">example</div><div class="dex" style="font-size:16px">"${aiSafe(ex)}"</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+          <button class="iconbtn" onclick="speak('${esc(ex)}','en-US')" title="American example pronunciation">${SPK}<span>US example</span></button>
+          <button class="iconbtn" onclick="speak('${esc(ex)}','en-GB')" title="British example pronunciation">${SPK}<span>UK example</span></button>
+        </div>
+        ${x.example_arabic?`<div style="font-family:var(--ar);direction:rtl;text-align:right;color:var(--mut);font-size:14px;line-height:1.7;margin-top:7px">${aiSafe(x.example_arabic)}</div>`:''}</div>`:''}
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:16px">
+        <select class="myin" id="aiSearchDeck" aria-label="Choose deck"><option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${d.id}">${aiSafe(d.t)}</option>`).join('')}</select>
+        <button class="next" id="aiSearchAddBtn" style="width:auto;margin:0;white-space:nowrap" onclick="aiSearchAdd(this)">Add to deck</button>
+      </div>
     </div>`;
-    if(!allEx.length)fetchExamples(q);
-  }catch(err){out.innerHTML='<div class="empty">Could not reach the dictionary. Check your connection and try again.</div>'}
+  }catch(e){out.innerHTML=`<div class="empty">${aiSafe(aiErrorMessage(e))}</div>`}
+  finally{if(btn){btn.disabled=false;btn.textContent='Search'}}
 }
-async function fetchExamples(q){
-  const box=document.getElementById('dExtraEx');if(!box)return;
-  try{
-    const r=await fetch('https://tatoeba.org/en/api_v0/search?from=eng&query='+encodeURIComponent('"'+q+'"')+'&sort=relevance&limit=5').then(x=>x.ok?x.json():null).catch(()=>null);
-    const sents=(r&&r.results?r.results:[]).map(s=>s.text).filter(t=>t&&t.length<110&&t.toLowerCase().includes(q.toLowerCase())).slice(0,3);
-    if(sents.length){
-      box.querySelector('ul').innerHTML=sents.map(x=>`<li><div class="dex">\u201c${x}\u201d</div></li>`).join('');
-      if(window._dictAdd&&!window._dictAdd.ex)window._dictAdd.ex=sents[0];
-    }else{box.remove()}
-  }catch(e){if(box)box.remove()}
-}
-function dictFrom(w){document.getElementById('dIn').value=w;dictLookup()}
-function dictAdd(btn){
-  const d=window._dictAdd;if(!d)return;
-  if(!myWords.some(x=>x[1].toLowerCase()===d.w.toLowerCase())){
-    myWords.unshift(["MY",d.w,d.ty,d.ar||'\u2014',d.ex||'']);
-    saveMy();updProg();rebuildUnits();
+function aiSearchAdd(btn){
+  const x=window._aiSearchAdd;if(!x)return;
+  const sel=document.getElementById('aiSearchDeck'),deck=sel?sel.value:'MY';
+  const word=String(x.word||'').trim();if(!word)return;
+  if(myWords.some(w=>w[0]===deck&&String(w[1]||'').toLowerCase()===word.toLowerCase())){
+    btn.textContent='Already in deck ✓';btn.disabled=true;return;
   }
-  btn.textContent='Added to my list \u2713';btn.disabled=true;
+  myWords.unshift([
+    deck,word,String(x.type||'n'),String(x.arabic||'—'),String(x.example||''),
+    String(x.ipa||''),String(x.english_definition||''),String(x.example_arabic||'')
+  ]);
+  saveMy();updProg();rebuildUnits();
+  btn.textContent='Added ✓';btn.disabled=true;
 }
 
 /* ---------- home / categories / motivation ---------- */

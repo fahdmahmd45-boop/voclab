@@ -1,0 +1,45 @@
+name: Load UI enhancements
+
+on:
+  push:
+    paths:
+      - 'assets/ui-enhancements.js'
+
+permissions:
+  contents: write
+
+jobs:
+  inject-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate enhancement script
+        run: node --check assets/ui-enhancements.js
+
+      - name: Keep only the isolated enhancement loader
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          main_tag = '<script src="/assets/ui-enhancements.js" defer></script>'
+          legacy_tag = '<script src="/assets/ui-language-fix.js" defer></script>'
+          html = html.replace(legacy_tag + '\n', '').replace(legacy_tag, '')
+          if main_tag not in html:
+              html = html.replace('</body>', f'{main_tag}\n</body>')
+          path.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Commit index change if needed
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Index already uses the isolated enhancement loader."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Keep isolated UI enhancement loader"
+          git push

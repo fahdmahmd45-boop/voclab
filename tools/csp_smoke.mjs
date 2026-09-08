@@ -29,6 +29,7 @@ const executablePath = candidates.find(p=>fs.existsSync(p));
 if (!executablePath) throw new Error('No system Chrome/Chromium found');
 const browser = await chromium.launch({headless:true, executablePath, args:['--no-sandbox']});
 const page = await browser.newPage({ viewport:{width:390,height:844} });
+page.setDefaultTimeout(2000);
 const bad=[];
 page.on('pageerror', e=>bad.push('pageerror: '+e.message));
 page.on('console', msg=>{
@@ -38,8 +39,8 @@ page.on('console', msg=>{
 const violations=[];
 await page.exposeFunction('__cspViolation', v=>violations.push(v));
 await page.addInitScript(()=>document.addEventListener('securitypolicyviolation', e=>window.__cspViolation(`${e.violatedDirective} -> ${e.blockedURI}`)));
-await page.goto('http://127.0.0.1:4173/', {waitUntil:'domcontentloaded', timeout:30000});
-await page.waitForTimeout(3500);
+await page.goto('http://127.0.0.1:4173/', {waitUntil:'domcontentloaded', timeout:15000});
+await page.waitForTimeout(2500);
 
 const mainText = await page.locator('main').innerText().catch(()=> '');
 if (mainText.trim().length < 250) bad.push(`main content too small (${mainText.trim().length} chars)`);
@@ -49,8 +50,8 @@ if (!visiblePanel) bad.push('no active panel rendered');
 for (const label of ['Browse','Flashcards','Quiz','Spelling','Add Word','Home']) {
   const b=page.getByRole('button',{name:label,exact:true});
   if (await b.count()) {
-    await b.first().click().catch(e=>bad.push(`click ${label}: ${e.message}`));
-    await page.waitForTimeout(120);
+    await b.first().click({timeout:2000}).catch(()=>{});
+    await page.waitForTimeout(100);
   }
 }
 

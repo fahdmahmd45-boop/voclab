@@ -43,6 +43,23 @@
     document.head.appendChild(link);
   }
 
+  function loadHomeUxRedesign(){
+    if (!document.getElementById('vocHomeUxRedesignStyles')) {
+      const link = document.createElement('link');
+      link.id = 'vocHomeUxRedesignStyles';
+      link.rel = 'stylesheet';
+      link.href = '/assets/home-ux-redesign.css';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('vocHomeUxRedesignScript')) {
+      const script = document.createElement('script');
+      script.id = 'vocHomeUxRedesignScript';
+      script.src = '/assets/home-ux-redesign.js';
+      script.async = false;
+      document.head.appendChild(script);
+    }
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -140,6 +157,7 @@
     loadAiTabsPolish();
     loadOriginalWidthTabsFix();
     loadCompactMobileTabs();
+    loadHomeUxRedesign();
     injectStyles();
     createInstagramHeader();
     createFooter();

@@ -237,6 +237,15 @@
     rootObserver.observe(document.body, { childList:true, subtree:true });
   }
 
+  function loadSecurityInlineEvents(){
+    if (document.getElementById('vocSecurityInlineEvents')) return;
+    const script = document.createElement('script');
+    script.id = 'vocSecurityInlineEvents';
+    script.src = '/assets/security-inline-events.js';
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
   function loadAppRedesign(){
     if (document.getElementById('vocAppRedesignStyles')) return;
     const link = document.createElement('link');
@@ -386,6 +395,7 @@
     document.documentElement.dir = 'ltr';
     installOtpFetchGuard();
     watchAuthForTurnstile();
+    loadSecurityInlineEvents();
     loadAppRedesign();
     loadAiTabsPolish();
     loadOriginalWidthTabsFix();

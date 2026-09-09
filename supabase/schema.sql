@@ -1,5 +1,7 @@
--- VocLab account data for Supabase Auth users.
--- Run this once in Supabase SQL Editor.
+-- VocLab Supabase schema mirror.
+-- Production database changes are versioned in supabase/migrations/ from 2026-09-09 onward.
+-- Keep this file aligned with the post-migration production schema; do not apply ad-hoc edits
+-- directly in production without adding a migration.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -14,6 +16,7 @@ create unique index if not exists profiles_phone_unique
   where phone is not null;
 
 alter table public.profiles enable row level security;
+grant all on table public.profiles to anon, authenticated, service_role;
 
 -- A signed-in user may read their own plan/profile, but cannot change plan.
 drop policy if exists "profiles_select_own" on public.profiles;
@@ -26,10 +29,13 @@ create policy "profiles_select_own"
 create table if not exists public.user_state (
   user_id uuid primary key references auth.users(id) on delete cascade,
   state jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint user_state_state_size_check
+    check (octet_length(state::text) <= 1048576)
 );
 
 alter table public.user_state enable row level security;
+grant all on table public.user_state to anon, authenticated, service_role;
 
 drop policy if exists "user_state_select_own" on public.user_state;
 create policy "user_state_select_own"
@@ -69,6 +75,9 @@ begin
 end;
 $$;
 
+revoke all on function public.handle_new_voclab_user() from public, anon, authenticated;
+grant execute on function public.handle_new_voclab_user() to service_role;
+
 drop trigger if exists on_auth_user_created_voclab on auth.users;
 create trigger on_auth_user_created_voclab
   after insert or update of phone on auth.users
@@ -94,8 +103,18 @@ create table if not exists public.ai_usage_counters (
 
 alter table public.ai_usage_counters enable row level security;
 revoke all on table public.ai_usage_counters from anon, authenticated;
+grant all on table public.ai_usage_counters to service_role;
 
-create or replace function public.consume_voclab_ai_quota()
+-- Intentionally NO RLS policies on ai_usage_counters.
+-- anon and authenticated have all table privileges revoked, and the quota RPC below is
+-- executable only by service_role. Adding client policies here would broaden the attack surface.
+comment on table public.ai_usage_counters is
+  'No client RLS policies by design: anon/authenticated privileges are revoked; service_role-only access.';
+
+-- Remove the legacy no-argument RPC if it exists so there is no client-callable overload.
+drop function if exists public.consume_voclab_ai_quota();
+
+create or replace function public.consume_voclab_ai_quota(p_user_id uuid)
 returns table (
   allowed boolean,
   remaining_today integer,
@@ -107,7 +126,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_uid uuid := auth.uid();
+  v_uid uuid := p_user_id;
   v_now timestamptz := clock_timestamp();
   v_day date := (v_now at time zone 'utc')::date;
   v_minute timestamptz := date_trunc('minute', v_now);
@@ -181,5 +200,5 @@ begin
 end;
 $$;
 
-revoke all on function public.consume_voclab_ai_quota() from public, anon;
-grant execute on function public.consume_voclab_ai_quota() to authenticated;
+revoke all on function public.consume_voclab_ai_quota(uuid) from public, anon, authenticated;
+grant execute on function public.consume_voclab_ai_quota(uuid) to service_role;

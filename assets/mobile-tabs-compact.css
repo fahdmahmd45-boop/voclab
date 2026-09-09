@@ -1,0 +1,29 @@
+/* VOC_COMPACT_MOBILE_TABS_V1
+   Presentation-only responsive navigation fix. */
+
+@media(max-width:760px){
+  .tabs{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:4px!important;
+    padding:4px!important;
+    overflow:visible!important;
+    align-items:stretch!important;
+  }
+  .tab{
+    width:100%!important;
+    min-width:0!important;
+    min-height:38px!important;
+    padding:7px 6px!important;
+    font-size:10.5px!important;
+    line-height:1.15!important;
+    flex:none!important;
+  }
+  .home-tab{gap:5px!important}
+  .home-tab svg{width:14px!important;height:14px!important}
+}
+
+@media(max-width:350px){
+  .tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .tab{font-size:10px!important}
+}

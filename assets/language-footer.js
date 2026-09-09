@@ -16,6 +16,15 @@
     document.head.appendChild(link);
   }
 
+  function loadInternalUIPolish(){
+    if (document.getElementById('vocInternalUIPolishStyles')) return;
+    const link = document.createElement('link');
+    link.id = 'vocInternalUIPolishStyles';
+    link.rel = 'stylesheet';
+    link.href = '/assets/internal-ui-polish.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -110,6 +119,7 @@
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
     loadAppRedesign();
+    loadInternalUIPolish();
     injectStyles();
     createInstagramHeader();
     createFooter();

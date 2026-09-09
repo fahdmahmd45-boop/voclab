@@ -25,6 +25,15 @@
     document.head.appendChild(link);
   }
 
+  function loadOriginalWidthTabsFix(){
+    if (document.getElementById('vocOriginalWidthTabsFix')) return;
+    const link = document.createElement('link');
+    link.id = 'vocOriginalWidthTabsFix';
+    link.rel = 'stylesheet';
+    link.href = '/assets/original-width-tabs-fix.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -120,6 +129,7 @@
     document.documentElement.dir = 'ltr';
     loadAppRedesign();
     loadAiTabsPolish();
+    loadOriginalWidthTabsFix();
     injectStyles();
     createInstagramHeader();
     createFooter();

@@ -26,14 +26,16 @@ header{padding:11px 16px!important}
 .voc-more-sep{height:1px;background:var(--line);margin:5px 4px}
 
 .tabs{display:none!important}
-body{padding-bottom:calc(var(--voc-bottom-h) + 26px + env(safe-area-inset-bottom))}
-main{padding-bottom:calc(var(--voc-bottom-h) + 42px + env(safe-area-inset-bottom))!important}
-.voc-footer{padding-bottom:calc(var(--voc-bottom-h) + 42px + env(safe-area-inset-bottom))!important}
+/* Leave enough real scroll clearance for the fixed bottom navigation on every page. */
+body{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 34px + env(safe-area-inset-bottom))}
+main{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 64px + env(safe-area-inset-bottom))!important}
+.voc-footer{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 56px + env(safe-area-inset-bottom))!important}
 
 .voc-bottom-nav{position:fixed;left:50%;bottom:calc(var(--voc-bottom-gap) + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;width:min(540px,calc(100% - 24px));height:var(--voc-bottom-h);display:grid;grid-template-columns:1fr 1fr 74px 1fr 1fr;align-items:center;gap:2px;padding:7px 9px;border:1px solid color-mix(in srgb,var(--line) 88%,var(--amber) 12%);border-radius:22px;background:color-mix(in srgb,var(--hd) 94%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 18px 50px rgba(0,0,0,.30)}
-.voc-bottom-item{height:54px;border:0;background:transparent;color:var(--mut);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:9.5px;font-weight:600;letter-spacing:.01em}
+.voc-bottom-item{height:54px;border:0;background:transparent;color:var(--mut);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:9.5px;font-weight:600;letter-spacing:.01em;box-shadow:none}
 .voc-bottom-item svg{width:19px;height:19px}
-.voc-bottom-item.active{color:var(--amber);background:color-mix(in srgb,var(--amber) 8%,transparent)}
+/* All regular nav items share the exact same visual structure; active state is color only. */
+.voc-bottom-item.active{color:var(--amber);background:transparent!important;box-shadow:none!important}
 .voc-bottom-item.voc-add-fab{width:58px;height:58px;justify-self:center;align-self:center;margin-top:-25px;border-radius:50%;background:var(--amber);color:var(--onacc);border:5px solid var(--bg);box-shadow:0 10px 28px color-mix(in srgb,var(--amber) 30%,rgba(0,0,0,.35))}
 .voc-bottom-item.voc-add-fab svg{width:24px;height:24px}
 .voc-bottom-item.voc-add-fab span{display:none}
@@ -42,14 +44,17 @@ main{padding-bottom:calc(var(--voc-bottom-h) + 42px + env(safe-area-inset-bottom
 .voc-home-subnav button{min-height:38px;border:0;border-radius:9px;background:transparent;color:var(--mut);font-size:11.5px;font-weight:600;cursor:pointer}
 .voc-home-subnav button.active{background:color-mix(in srgb,var(--amber) 13%,var(--card2));color:var(--amber)}
 
-.home>#streakBox{background:linear-gradient(145deg,color-mix(in srgb,var(--bad) 12%,var(--card)),var(--card))!important;border-color:color-mix(in srgb,var(--bad) 38%,var(--line))!important;box-shadow:0 10px 32px color-mix(in srgb,var(--bad) 9%,transparent)!important}
-.home>#streakBox>span{filter:saturate(1.15)}
-.home>.hprog{background:linear-gradient(145deg,color-mix(in srgb,var(--amber) 10%,var(--card)),var(--card))!important;border-color:color-mix(in srgb,var(--amber) 38%,var(--line))!important;box-shadow:0 10px 32px color-mix(in srgb,var(--amber) 8%,transparent)!important}
+/* A missing streak is a neutral state, not an error. */
+.home>#streakBox{background:var(--card)!important;border-color:var(--line)!important;box-shadow:var(--shadow)!important}
+.home>#streakBox>span{filter:none}
+/* Mastered progress is the single accent-positive card. */
+.home>.hprog{background:linear-gradient(145deg,color-mix(in srgb,var(--amber) 10%,var(--card)),var(--card))!important;border-color:color-mix(in srgb,var(--amber) 44%,var(--line))!important;box-shadow:0 10px 32px color-mix(in srgb,var(--amber) 8%,transparent)!important}
 .home>.hprog .pbar{background:color-mix(in srgb,var(--amber) 12%,var(--card2))!important}
 .home>.hprog .pbar i{background:var(--amber)!important}
 .hcard .hcount{margin-top:13px!important}
 .hcard .hbar{height:5px!important;margin-top:8px!important;background:color-mix(in srgb,var(--line) 75%,var(--card2))!important}
-.hcard .hbar i{min-width:0;background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 75%,var(--ok) 25%),var(--amber))!important}
+/* Deck completion uses the same single accent instead of a mixed green/gold success gradient. */
+.hcard .hbar i{min-width:0;background:var(--amber)!important}
 
 @media(max-width:640px){
   :root{--voc-bottom-h:68px;--voc-bottom-gap:8px}
@@ -64,6 +69,9 @@ main{padding-bottom:calc(var(--voc-bottom-h) + 42px + env(safe-area-inset-bottom
   .voc-bottom-item.voc-add-fab{width:54px;height:54px;margin-top:-23px;border-width:4px}
   .voc-home-subnav{margin-bottom:15px}
   .voc-home-subnav button{font-size:11px;min-height:36px}
+  /* Extra mobile clearance accounts for browser chrome and keeps final cards fully scrollable above the fixed nav. */
+  main{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 78px + env(safe-area-inset-bottom))!important}
+  .voc-footer{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 70px + env(safe-area-inset-bottom))!important}
 }
 @media(max-width:370px){
   .voc-bottom-nav{grid-template-columns:1fr 1fr 60px 1fr 1fr}

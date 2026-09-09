@@ -7,6 +7,15 @@
   const INSTAGRAM_URL = 'https://www.instagram.com/voclab_sa/';
   const ICON_INSTAGRAM = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>';
 
+  function loadAppRedesign(){
+    if (document.getElementById('vocAppRedesignStyles')) return;
+    const link = document.createElement('link');
+    link.id = 'vocAppRedesignStyles';
+    link.rel = 'stylesheet';
+    link.href = '/assets/app-redesign.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -100,6 +109,7 @@
   function start(){
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
+    loadAppRedesign();
     injectStyles();
     createInstagramHeader();
     createFooter();

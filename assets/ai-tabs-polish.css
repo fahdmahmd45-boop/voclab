@@ -1,0 +1,136 @@
+/* VOC_AI_TABS_POLISH_V1
+   Targeted presentation-only additions: segmented navigation + AI Search.
+   Does not change learning, auth, data, deck, SRS, or AI request logic. */
+
+.tabs{
+  display:flex;
+  gap:4px!important;
+  padding:5px!important;
+  border:1px solid var(--line)!important;
+  border-radius:16px!important;
+  background:color-mix(in srgb,var(--card) 92%,transparent)!important;
+  box-shadow:0 10px 32px rgba(0,0,0,.05)!important;
+}
+.tab{
+  min-height:46px;
+  border-radius:11px!important;
+  padding:11px 16px!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  color:var(--mut)!important;
+}
+.tab:hover{color:var(--tx)!important;background:color-mix(in srgb,var(--card2) 72%,transparent)!important}
+.tab.on{
+  background:var(--amber)!important;
+  color:var(--onacc)!important;
+  font-weight:700!important;
+  box-shadow:none!important;
+}
+
+#p-dict .dwrap{max-width:1000px!important;margin:0 auto}
+#p-dict .dwrap>div:first-child{
+  display:grid;
+  grid-template-columns:minmax(280px,.78fr) minmax(320px,1.22fr);
+  align-items:end;
+  gap:28px;
+  padding:8px 2px 18px;
+}
+#p-dict .dwrap>div:first-child>div:first-child{
+  font-family:var(--en)!important;
+  font-size:clamp(42px,5vw,58px)!important;
+  line-height:.98!important;
+  letter-spacing:-.035em!important;
+  font-weight:600!important;
+}
+#p-dict .dwrap>div:first-child>div:first-child::before{
+  content:'AI VOCABULARY';
+  display:block;
+  margin-bottom:12px;
+  font-family:var(--ui);
+  font-size:10.5px;
+  line-height:1;
+  font-weight:700;
+  letter-spacing:.17em;
+  color:var(--amber);
+}
+#p-dict .dwrap>div:first-child>div:last-child{
+  color:var(--mut)!important;
+  font-size:14px!important;
+  line-height:1.65!important;
+  max-width:none!important;
+  padding-bottom:4px;
+}
+#p-dict .dsearch{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px!important;
+  padding:7px!important;
+  margin:0 0 16px!important;
+  border:1px solid var(--line)!important;
+  border-radius:17px!important;
+  background:var(--card)!important;
+  box-shadow:0 10px 34px rgba(0,0,0,.055)!important;
+}
+#p-dict .dsearch .search{
+  min-height:54px!important;
+  border:0!important;
+  background:transparent!important;
+  padding:0 16px!important;
+  font-size:16px!important;
+}
+#p-dict .dsearch .search:focus{border:0!important;box-shadow:none!important}
+#p-dict .dsearch .dbtn{
+  width:auto!important;
+  min-width:128px!important;
+  min-height:54px!important;
+  margin:0!important;
+  padding:0 22px!important;
+  border-radius:12px!important;
+  font-size:15px!important;
+  font-weight:700!important;
+}
+#p-dict .dcard{
+  margin-top:0!important;
+  padding:30px!important;
+  border:1px solid var(--line)!important;
+  border-radius:22px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.12)!important;
+}
+body.light #p-dict .dcard{box-shadow:0 16px 44px rgba(35,28,12,.07)!important}
+#p-dict .dword{
+  font-size:clamp(42px,5vw,58px)!important;
+  line-height:1!important;
+  letter-spacing:-.03em!important;
+}
+#p-dict .dar{font-size:21px!important}
+#p-dict .dpos{
+  margin-top:18px!important;
+  padding-top:16px!important;
+  border-top:1px solid var(--line)!important;
+}
+#p-dict .dposname{font-size:10px!important;letter-spacing:.15em!important}
+#p-dict #aiSearchDeck{min-height:48px!important;border-radius:12px!important;font-size:14px!important}
+#p-dict #aiSearchAddBtn{min-height:48px!important;border-radius:12px!important;padding-inline:22px!important;font-weight:700!important}
+#p-dict #dOut>.empty{
+  min-height:120px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border-radius:18px!important;
+}
+
+@media(max-width:760px){
+  .tab{min-height:42px;padding:9px 12px!important;font-size:12px!important}
+  #p-dict .dwrap>div:first-child{grid-template-columns:1fr;gap:8px;padding-bottom:14px}
+  #p-dict .dwrap>div:first-child>div:last-child{padding-bottom:0}
+  #p-dict .dsearch{grid-template-columns:1fr}
+  #p-dict .dsearch .dbtn{width:100%!important;min-height:48px!important}
+  #p-dict .dcard{padding:20px!important;border-radius:18px!important}
+}
+@media(max-width:520px){
+  .tabs{gap:3px!important;padding:4px!important}
+  .tab{min-width:96px}
+  #p-dict .dwrap>div:first-child>div:first-child{font-size:38px!important}
+  #p-dict .dword{font-size:40px!important}
+}

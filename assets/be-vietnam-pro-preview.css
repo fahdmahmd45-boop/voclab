@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+/* Typography preview only: keep the existing serif identity for voclab and vocabulary words,
+   while moving product UI copy to Be Vietnam Pro. */
+:root{
+  --ui:'Be Vietnam Pro','Inter',-apple-system,'Segoe UI',sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea{
+  font-family:var(--ui);
+}
+
+/* UI headings that previously inherited the editorial serif. */
+.hgreet,
+.voc-auth-title,
+.prog b,
+.hprog b{
+  font-family:var(--ui)!important;
+}
+
+/* Preserve the established editorial identity where it matters most. */
+h1,
+.voc-auth-brand,
+.voc-footer-brand,
+.fcard .word,
+.qword .word,
+.dword,
+.row .w,
+.hquote,
+.praise{
+  font-family:var(--en)!important;
+}
+
+/* Arabic remains on the dedicated Arabic face instead of relying on fallback glyphs. */
+[dir='rtl'],
+.row .m,
+.fcard .ans,
+.opt,
+.tprompt .m,
+.dar,
+.myin[dir='rtl']{
+  font-family:var(--ar);
+}

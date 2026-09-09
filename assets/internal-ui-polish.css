@@ -1,0 +1,346 @@
+/* VOC_INTERNAL_UI_POLISH_V1
+   Presentation-only overrides for Browse, AI Search, Flashcards, Quiz,
+   Spelling, Add Words and the filter drawer. No learning/auth/data logic. */
+
+:root{
+  --voc-inner:820px;
+  --voc-control-h:48px;
+  --voc-soft-shadow:0 18px 55px rgba(0,0,0,.14);
+}
+body.light{--voc-soft-shadow:0 16px 44px rgba(35,28,12,.07)}
+
+/* ---------- shared inner-page rhythm ---------- */
+#p-dict,#p-list,#p-cards,#p-mcq,#p-type,#p-my{padding-top:2px}
+#p-dict .empty,#p-list .empty,#p-cards .empty,#p-mcq .empty,#p-type .empty,#p-my .empty{
+  border:1px dashed color-mix(in srgb,var(--line) 88%,var(--amber) 12%);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--card) 82%,transparent);
+  padding:28px 22px;
+  color:var(--mut);
+}
+
+.lvlstat{
+  border:1px solid var(--line)!important;
+  border-radius:15px!important;
+  padding:12px 15px!important;
+  background:color-mix(in srgb,var(--card) 96%,transparent)!important;
+  box-shadow:none!important;
+}
+
+/* ---------- navigation ---------- */
+.tabs{
+  border-color:color-mix(in srgb,var(--line) 90%,var(--amber) 10%);
+  box-shadow:0 8px 30px rgba(0,0,0,.05);
+}
+.tab{letter-spacing:-.01em}
+.tab.on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 68%,transparent)}
+
+.voc-deck-back-wrap{margin-bottom:16px!important}
+.voc-deck-back{
+  min-height:38px;
+  border-radius:11px!important;
+  padding:8px 12px!important;
+  background:color-mix(in srgb,var(--card) 94%,transparent)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.07);
+}
+
+/* ---------- filter drawer ---------- */
+.drawer{
+  width:340px!important;
+  padding:28px 22px!important;
+  box-shadow:24px 0 70px rgba(0,0,0,.22);
+}
+.drawer h2{
+  font-size:10px!important;
+  letter-spacing:.18em!important;
+  margin-bottom:18px!important;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--line);
+}
+.drawer .filters{gap:10px!important}
+.drawer select,.drawer .search{
+  min-height:var(--voc-control-h);
+  padding:11px 13px!important;
+  border-radius:12px!important;
+  background:var(--card)!important;
+}
+.overlay{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+
+/* ---------- AI Search ---------- */
+.dwrap{max-width:var(--voc-inner)!important;margin:0 auto}
+#p-dict .dwrap>div:first-child{padding:10px 3px 6px}
+#p-dict .dwrap>div:first-child>div:first-child{
+  font-size:34px!important;
+  letter-spacing:-.025em;
+}
+#p-dict .dwrap>div:first-child>div:last-child{
+  max-width:620px;
+  font-size:13.5px!important;
+  line-height:1.65;
+}
+#p-dict .dsearch{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  margin-top:8px;
+  padding:7px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--card);
+  box-shadow:0 12px 38px rgba(0,0,0,.08);
+}
+#p-dict .dsearch .search{
+  min-height:50px;
+  border:0!important;
+  background:transparent!important;
+  padding:12px 14px!important;
+  font-size:15px;
+}
+#p-dict .dsearch .search:focus{box-shadow:none}
+#p-dict .dsearch .dbtn{
+  width:auto!important;
+  min-width:112px;
+  min-height:50px;
+  margin:0!important;
+  border-radius:11px!important;
+}
+#p-dict #dOut>.empty{margin-top:16px!important;min-height:126px;display:grid;place-items:center;text-align:center}
+#p-dict .dcard{
+  padding:24px!important;
+  border:1px solid var(--line)!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 97%,var(--amber) 3%),var(--card))!important;
+  box-shadow:var(--voc-soft-shadow)!important;
+}
+#p-dict .dword{font-size:46px!important;letter-spacing:-.025em}
+#p-dict .dar{font-size:21px!important;margin-top:16px!important}
+#p-dict .dpos{
+  margin-top:16px!important;
+  padding-top:15px!important;
+  border-top:1px solid var(--line)!important;
+}
+#p-dict .dposname{font-size:9.5px!important;letter-spacing:.16em!important}
+#p-dict .iconbtn{border-radius:10px}
+#p-dict #aiSearchDeck{min-height:44px;border-radius:11px}
+#p-dict #aiSearchAddBtn{min-height:44px;padding-inline:18px}
+
+/* ---------- Browse ---------- */
+#p-list{max-width:940px!important}
+#p-list #wordRows{display:grid;gap:10px}
+#p-list .row{
+  margin-bottom:0!important;
+  padding:17px 18px!important;
+  border-radius:16px!important;
+  background:color-mix(in srgb,var(--card) 98%,var(--amber) 2%);
+  box-shadow:0 8px 30px rgba(0,0,0,.045);
+}
+#p-list .row:hover{transform:translateY(-1px);box-shadow:0 13px 34px rgba(0,0,0,.07)}
+#p-list .rtop{gap:8px 10px!important}
+#p-list .idx{
+  width:30px;
+  min-width:30px!important;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:var(--card2);
+  font-size:10.5px!important;
+}
+#p-list .spk{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border:1px solid transparent;
+  border-radius:9px;
+}
+#p-list .spk:hover{background:var(--card2);border-color:var(--line)}
+#p-list .row .w{font-size:24px!important;line-height:1.05;letter-spacing:-.015em}
+#p-list .row .m{font-size:15.5px!important;color:var(--tx)}
+#p-list .row .t{border-radius:7px!important;padding:3px 7px!important}
+#p-list .row .u{font-size:10.5px!important}
+#p-list .row .ex{
+  margin-top:12px!important;
+  padding-top:11px!important;
+  line-height:1.6;
+}
+#p-list .kbtn,#p-list .delbtn{min-height:30px;border-radius:9px!important;padding:5px 10px!important}
+#p-list .selhead{
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+}
+#p-list .selbar{border-radius:14px!important;padding:11px 12px!important}
+
+/* ---------- deck picker shown inside study modes ---------- */
+#p-cards>.empty+.hgrid,#p-mcq>.empty+.hgrid,#p-type>.empty+.hgrid{
+  max-width:940px;
+  margin:14px auto 0;
+}
+#p-cards>.empty,#p-mcq>.empty,#p-type>.empty{max-width:940px;margin:0 auto}
+
+/* ---------- Flashcards ---------- */
+#p-cards .fcwrap{max-width:720px!important}
+#p-cards .fcard3{min-height:370px}
+#p-cards .fcard{
+  min-height:370px!important;
+  border-radius:22px!important;
+  border-color:color-mix(in srgb,var(--line) 88%,var(--amber) 12%)!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  box-shadow:var(--voc-soft-shadow)!important;
+}
+#p-cards .fcard .word{font-size:58px!important;letter-spacing:-.035em}
+#p-cards .fcard .ans{font-size:29px}
+#p-cards .fcard .hint{bottom:20px!important;letter-spacing:.12em!important}
+#p-cards .fcbtns{gap:9px!important;margin-top:12px!important}
+#p-cards .fcbtns button{
+  min-height:48px!important;
+  border:1px solid var(--line)!important;
+  background:var(--card)!important;
+  color:var(--tx)!important;
+  box-shadow:none;
+}
+#p-cards .fcbtns .bno{border-color:color-mix(in srgb,var(--bad) 42%,var(--line))!important;background:color-mix(in srgb,var(--bad) 8%,var(--card))!important}
+#p-cards .fcbtns .bmed{border-color:color-mix(in srgb,var(--blue) 40%,var(--line))!important;background:color-mix(in srgb,var(--blue) 8%,var(--card))!important}
+#p-cards .fcbtns .bok{border-color:color-mix(in srgb,var(--ok) 42%,var(--line))!important;background:color-mix(in srgb,var(--ok) 8%,var(--card))!important}
+#p-cards .fcbtns button:hover{border-color:var(--amber)!important;transform:translateY(-1px)}
+#p-cards .counter{line-height:1.6;letter-spacing:.025em!important}
+
+/* ---------- Quiz ---------- */
+#p-mcq .qwrap{max-width:720px!important}
+#p-mcq .qword{
+  padding:34px 26px!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  box-shadow:var(--voc-soft-shadow)!important;
+  margin-bottom:12px!important;
+}
+#p-mcq .qword .word{font-size:48px!important;letter-spacing:-.025em}
+#p-mcq .qword .qex{font-size:16px!important;line-height:1.6}
+#p-mcq .opt{
+  min-height:54px;
+  margin-bottom:9px!important;
+  border-radius:13px!important;
+  padding:14px 17px!important;
+  font-size:16px!important;
+  background:var(--card)!important;
+  box-shadow:0 6px 22px rgba(0,0,0,.035);
+}
+#p-mcq .opt:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--card) 94%,var(--amber) 6%)!important}
+#p-mcq .opt.right{background:color-mix(in srgb,var(--ok) 10%,var(--card))!important}
+#p-mcq .opt.wrong{background:color-mix(in srgb,var(--bad) 9%,var(--card))!important}
+
+/* ---------- Spelling ---------- */
+#p-type .qwrap{max-width:720px!important}
+#p-type .tprompt{
+  padding:34px 26px!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  box-shadow:var(--voc-soft-shadow)!important;
+}
+#p-type .tprompt .m{font-size:29px!important}
+#p-type .tprompt .bex{font-size:17px!important;line-height:1.65}
+#p-type .tin{
+  min-height:56px;
+  border-radius:13px!important;
+  padding:14px 16px!important;
+  font-size:17px!important;
+  background:var(--card)!important;
+}
+#p-type .next{min-height:50px;border-radius:12px!important}
+
+/* ---------- AI vocabulary / Add Words ---------- */
+#p-my{max-width:880px;margin:0 auto}
+#p-my>.myform{
+  border:1px solid var(--line)!important;
+  border-radius:20px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.055)!important;
+}
+#p-my>.myform:first-child{padding:24px!important}
+#p-my .myform h3{
+  font-family:var(--en);
+  font-size:28px;
+  font-weight:600;
+  letter-spacing:-.02em;
+  margin-bottom:16px;
+}
+#p-my .mygrid{gap:10px!important}
+#p-my .myin{
+  min-height:var(--voc-control-h);
+  border-radius:12px!important;
+  padding:11px 13px!important;
+  background:var(--card2)!important;
+}
+#p-my textarea.myin{min-height:116px;line-height:1.55}
+#p-my .addbtn{
+  min-height:48px;
+  border-radius:12px!important;
+  font-weight:600;
+}
+#p-my details.myform{margin-top:12px!important;background:var(--card)!important;box-shadow:none!important}
+#p-my details.myform summary{
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  list-style:none;
+  letter-spacing:-.01em;
+}
+#p-my details.myform summary::-webkit-details-marker{display:none}
+#p-my details.myform summary::after{content:'＋';margin-left:auto;color:var(--mut);font-size:18px;font-weight:400}
+#p-my details[open].myform summary::after{content:'−'}
+#p-my #myList{margin-top:14px}
+#p-my #myList .row{padding:17px 18px!important;border-radius:16px!important}
+#p-my #myList .row .w{font-size:23px!important}
+#p-my #aiPreview .myform{border-radius:17px!important;box-shadow:none!important}
+
+/* ---------- completion states ---------- */
+.done{
+  border:1px solid var(--line);
+  border-radius:20px!important;
+  background:var(--card)!important;
+  padding:34px 24px!important;
+  box-shadow:var(--voc-soft-shadow);
+}
+.done .praise{color:var(--mut)}
+
+/* ---------- mobile ---------- */
+@media(max-width:640px){
+  :root{--voc-control-h:46px}
+  #p-dict .dwrap>div:first-child{padding-top:4px}
+  #p-dict .dwrap>div:first-child>div:first-child{font-size:30px!important}
+  #p-dict .dsearch{grid-template-columns:1fr;padding:6px}
+  #p-dict .dsearch .dbtn{width:100%!important;min-height:46px}
+  #p-dict .dcard{padding:19px!important;border-radius:17px!important}
+  #p-dict .dword{font-size:38px!important}
+  #p-dict .dcard>div:last-child{grid-template-columns:1fr!important}
+  #p-dict #aiSearchAddBtn{width:100%!important}
+
+  #p-list .row{padding:15px 14px!important}
+  #p-list .row .w{font-size:22px!important}
+  #p-list .row .u{width:100%;margin-inline-start:0!important;padding-left:40px}
+  #p-list .row .ex{font-size:14px!important}
+  #p-list .selhead{align-items:flex-start}
+
+  #p-cards .fcard3,#p-cards .fcard{min-height:315px!important}
+  #p-cards .fcard .word{font-size:43px!important}
+  #p-cards .fcbtns{gap:7px!important}
+  #p-cards .fcbtns button{font-size:12.5px!important;padding-inline:8px!important}
+
+  #p-mcq .qword,#p-type .tprompt{padding:25px 17px!important}
+  #p-mcq .qword .word{font-size:39px!important}
+  #p-mcq .opt{min-height:51px;padding:13px 14px!important}
+  #p-type .tprompt .m{font-size:25px!important}
+
+  #p-my>.myform:first-child{padding:18px!important}
+  #p-my .myform h3{font-size:25px;margin-bottom:13px}
+}
+
+@media(max-width:430px){
+  .drawer{width:min(318px,88vw)!important;padding:23px 17px!important}
+  #p-list .idx{width:28px;min-width:28px!important;height:28px}
+  #p-list .spk{width:28px;height:28px}
+  #p-list .row .w{font-size:21px!important}
+  #p-cards .fcbtns button{font-size:11.5px!important}
+}

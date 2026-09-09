@@ -16,6 +16,15 @@
     document.head.appendChild(link);
   }
 
+  function loadAiTabsPolish(){
+    if (document.getElementById('vocAiTabsPolishStyles')) return;
+    const link = document.createElement('link');
+    link.id = 'vocAiTabsPolishStyles';
+    link.rel = 'stylesheet';
+    link.href = '/assets/ai-tabs-polish.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -110,6 +119,7 @@
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
     loadAppRedesign();
+    loadAiTabsPolish();
     injectStyles();
     createInstagramHeader();
     createFooter();

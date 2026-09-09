@@ -60,6 +60,15 @@
     }
   }
 
+  function loadBeVietnamProPreview(){
+    if (document.getElementById('vocBeVietnamProPreview')) return;
+    const link = document.createElement('link');
+    link.id = 'vocBeVietnamProPreview';
+    link.rel = 'stylesheet';
+    link.href = '/assets/be-vietnam-pro-preview.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -158,6 +167,7 @@
     loadOriginalWidthTabsFix();
     loadCompactMobileTabs();
     loadHomeUxRedesign();
+    loadBeVietnamProPreview();
     injectStyles();
     createInstagramHeader();
     createFooter();

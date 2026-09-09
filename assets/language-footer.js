@@ -34,6 +34,15 @@
     document.head.appendChild(link);
   }
 
+  function loadCompactMobileTabs(){
+    if (document.getElementById('vocCompactMobileTabs')) return;
+    const link = document.createElement('link');
+    link.id = 'vocCompactMobileTabs';
+    link.rel = 'stylesheet';
+    link.href = '/assets/mobile-tabs-compact.css';
+    document.head.appendChild(link);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -130,6 +139,7 @@
     loadAppRedesign();
     loadAiTabsPolish();
     loadOriginalWidthTabsFix();
+    loadCompactMobileTabs();
     injectStyles();
     createInstagramHeader();
     createFooter();

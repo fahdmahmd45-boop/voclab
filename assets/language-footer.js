@@ -5,7 +5,246 @@
   window.__VOC_INSTAGRAM_FOOTER_V1__ = true;
 
   const INSTAGRAM_URL = 'https://www.instagram.com/voclab_sa/';
+  const TURNSTILE_CONFIG_ENDPOINT = '/api/public-config';
+  const SUPABASE_AUTH_HOST = 'hknecvleujjdyoqtwaar.supabase.co';
   const ICON_INSTAGRAM = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>';
+
+  let turnstileSiteKey = '';
+  let turnstileToken = '';
+  let turnstileWidgetId = null;
+  let turnstileConfigPromise = null;
+  let turnstileScriptPromise = null;
+
+  function setAuthProtectionError(message){
+    const error = document.getElementById('vocAuthError');
+    if (!error) return;
+    error.textContent = message || '';
+    error.classList.toggle('show', Boolean(message));
+  }
+
+  function setInitialOtpButtonReady(ready){
+    const send = document.getElementById('vocSendBtn');
+    if (send) send.disabled = !ready;
+  }
+
+  function clearTurnstileWidget(){
+    turnstileToken = '';
+    if (turnstileWidgetId !== null && window.turnstile?.remove) {
+      try { window.turnstile.remove(turnstileWidgetId); } catch {}
+    }
+    turnstileWidgetId = null;
+  }
+
+  function loadTurnstileConfig(){
+    if (turnstileSiteKey) return Promise.resolve(turnstileSiteKey);
+    if (turnstileConfigPromise) return turnstileConfigPromise;
+
+    const fetcher = window.fetch.bind(window);
+    turnstileConfigPromise = fetcher(TURNSTILE_CONFIG_ENDPOINT, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('Turnstile configuration unavailable');
+      const data = await response.json();
+      const key = String(data?.turnstileSiteKey || '').trim();
+      if (!key) throw new Error('Turnstile site key missing');
+      turnstileSiteKey = key;
+      return key;
+    }).catch((error) => {
+      turnstileConfigPromise = null;
+      throw error;
+    });
+    return turnstileConfigPromise;
+  }
+
+  function loadTurnstileScript(){
+    if (window.turnstile?.render) return Promise.resolve();
+    if (turnstileScriptPromise) return turnstileScriptPromise;
+
+    turnstileScriptPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-voclab-turnstile]');
+      if (existing) {
+        if (window.turnstile?.render) return resolve();
+        existing.addEventListener('load', () => resolve(), { once:true });
+        existing.addEventListener('error', () => reject(new Error('Turnstile failed to load')), { once:true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.voclabTurnstile = '1';
+      script.addEventListener('load', () => resolve(), { once:true });
+      script.addEventListener('error', () => reject(new Error('Turnstile failed to load')), { once:true });
+      document.head.appendChild(script);
+    }).catch((error) => {
+      turnstileScriptPromise = null;
+      throw error;
+    });
+
+    return turnstileScriptPromise;
+  }
+
+  async function mountTurnstile(){
+    const overlay = document.getElementById('vocAuthOverlay');
+    const body = document.getElementById('vocAuthBody');
+    if (!overlay?.classList.contains('open') || !body) return;
+
+    const actionButton = body.querySelector('#vocSendBtn, #vocResendBtn');
+    if (!actionButton) return;
+
+    let holder = body.querySelector('#vocTurnstileGuard');
+    if (!holder) {
+      holder = document.createElement('div');
+      holder.id = 'vocTurnstileGuard';
+      holder.className = 'voc-turnstile-wrap';
+      holder.setAttribute('aria-label', 'Security verification');
+      actionButton.parentNode.insertBefore(holder, actionButton);
+    }
+
+    if (actionButton.id === 'vocSendBtn') setInitialOtpButtonReady(false);
+    if (holder.dataset.mounted === '1') return;
+
+    try {
+      const [siteKey] = await Promise.all([loadTurnstileConfig(), loadTurnstileScript()]);
+      if (!holder.isConnected || !document.getElementById('vocAuthOverlay')?.classList.contains('open')) return;
+
+      clearTurnstileWidget();
+      holder.dataset.mounted = '1';
+      turnstileWidgetId = window.turnstile.render(holder, {
+        sitekey: siteKey,
+        theme: 'auto',
+        callback(token){
+          turnstileToken = String(token || '');
+          setAuthProtectionError('');
+          setInitialOtpButtonReady(Boolean(turnstileToken));
+        },
+        'expired-callback'(){
+          turnstileToken = '';
+          setInitialOtpButtonReady(false);
+        },
+        'error-callback'(){
+          turnstileToken = '';
+          setInitialOtpButtonReady(false);
+          setAuthProtectionError('Verification protection could not start. Please try again.');
+        }
+      });
+    } catch (error) {
+      holder.dataset.mounted = '';
+      turnstileToken = '';
+      setInitialOtpButtonReady(false);
+      setAuthProtectionError('Verification protection is temporarily unavailable. Please try again.');
+      console.error('VocLab Turnstile setup error:', error?.message || error);
+    }
+  }
+
+  function installOtpFetchGuard(){
+    if (window.__VOC_TURNSTILE_FETCH_GUARD__) return;
+    window.__VOC_TURNSTILE_FETCH_GUARD__ = true;
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = async (input, init = {}) => {
+      let url;
+      try {
+        url = typeof input === 'string' || input instanceof URL
+          ? new URL(input, location.href)
+          : new URL(input.url, location.href);
+      } catch {
+        return nativeFetch(input, init);
+      }
+
+      const method = String(init.method || (typeof input === 'object' && input?.method) || 'GET').toUpperCase();
+      const isOtpRequest = url.hostname === SUPABASE_AUTH_HOST && url.pathname === '/auth/v1/otp' && method === 'POST';
+      if (!isOtpRequest) return nativeFetch(input, init);
+
+      const token = String(turnstileToken || '').trim();
+      if (!token) {
+        setAuthProtectionError('Complete the verification check before requesting a code.');
+        setTimeout(mountTurnstile, 0);
+        return new Response(JSON.stringify({
+          error: 'captcha_verification_required',
+          error_description: 'Captcha verification required',
+          msg: 'Captcha verification required'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      let bodyText = init.body;
+      if (bodyText == null && typeof input === 'object' && input?.body && typeof input.body === 'string') {
+        bodyText = input.body;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(String(bodyText || '{}'));
+      } catch {
+        return nativeFetch(input, init);
+      }
+
+      payload.gotrue_meta_security = { captcha_token: token };
+      turnstileToken = '';
+      setInitialOtpButtonReady(false);
+
+      const headers = new Headers(init.headers || (typeof input === 'object' ? input.headers : undefined) || {});
+      if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+
+      // Supabase Auth validates the Turnstile token server-side before it sends the OTP.
+      const response = await nativeFetch(input, {
+        ...init,
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      try {
+        if (turnstileWidgetId !== null && window.turnstile?.reset) window.turnstile.reset(turnstileWidgetId);
+      } catch {}
+      return response;
+    };
+  }
+
+  function watchAuthForTurnstile(){
+    function attach(){
+      const overlay = document.getElementById('vocAuthOverlay');
+      if (!overlay || overlay.dataset.vocTurnstileObserved === '1') return false;
+      overlay.dataset.vocTurnstileObserved = '1';
+
+      const observer = new MutationObserver(() => {
+        if (overlay.classList.contains('open')) setTimeout(mountTurnstile, 0);
+        else clearTurnstileWidget();
+      });
+      observer.observe(overlay, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
+
+      overlay.addEventListener('click', (event) => {
+        const action = event.target.closest?.('#vocSendBtn, #vocResendBtn');
+        if (!action || turnstileToken) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setAuthProtectionError('Complete the verification check before requesting a code.');
+        setTimeout(mountTurnstile, 0);
+      }, true);
+      return true;
+    }
+
+    if (attach()) return;
+    const rootObserver = new MutationObserver(() => {
+      if (attach()) rootObserver.disconnect();
+    });
+    rootObserver.observe(document.body, { childList:true, subtree:true });
+  }
+
+  function loadSecurityInlineEvents(){
+    if (document.getElementById('vocSecurityInlineEvents')) return;
+    const script = document.createElement('script');
+    script.id = 'vocSecurityInlineEvents';
+    script.src = '/assets/security-inline-events.js';
+    script.async = false;
+    document.head.appendChild(script);
+  }
 
   function loadAppRedesign(){
     if (document.getElementById('vocAppRedesignStyles')) return;
@@ -78,6 +317,7 @@
       }
       .voc-instagram-header:hover{border-color:var(--amber);color:var(--amber)}
       .voc-instagram-header:active{transform:scale(.97)}
+      .voc-turnstile-wrap{min-height:65px;margin-top:12px;display:flex;justify-content:center;align-items:center}
       .voc-footer{
         width:100%;
         border-top:1px solid var(--line);
@@ -153,6 +393,9 @@
   function start(){
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
+    installOtpFetchGuard();
+    watchAuthForTurnstile();
+    loadSecurityInlineEvents();
     loadAppRedesign();
     loadAiTabsPolish();
     loadOriginalWidthTabsFix();

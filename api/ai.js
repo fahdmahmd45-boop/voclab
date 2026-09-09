@@ -1,9 +1,13 @@
+const {
+  NETWORK_DAILY_LIMIT,
+  enforceNetworkRateLimit,
+  tooLargeByHeader,
+  validateUploadedFile
+} = require('./_security');
+
 const MAX_FILE_BYTES = 2500000;
 const MAX_FILE_WORDS = 40;
 const DAILY_VISITOR_LIMIT = 10;
-const MINUTE_IP_LIMIT = 5;
-const DAILY_IP_SAFETY_LIMIT = 100;
-const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx','ppt','pptx','xls','xlsx']);
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hknecvleujjdyoqtwaar.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_9GOPoqC3kpfLVcvQoSXXFQ_gXcGK6om';
@@ -33,40 +37,6 @@ const schema = {
   },
   required: ['words']
 };
-
-const recentByIp = new Map();
-const dailyByIp = new Map();
-
-function todayUtc() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function secondsUntilUtcMidnight() {
-  const now = new Date();
-  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
-  return Math.max(60, Math.ceil((next - now.getTime()) / 1000));
-}
-
-function minuteRateLimited(ip) {
-  const now = Date.now();
-  const arr = (recentByIp.get(ip) || []).filter(t => now - t < 60000);
-  if (arr.length >= MINUTE_IP_LIMIT) {
-    recentByIp.set(ip, arr);
-    return true;
-  }
-  arr.push(now);
-  recentByIp.set(ip, arr);
-  return false;
-}
-
-function dailyIpRateLimited(ip) {
-  const day = todayUtc();
-  const current = dailyByIp.get(ip);
-  const count = current && current.day === day ? current.count : 0;
-  if (count >= DAILY_IP_SAFETY_LIMIT) return true;
-  dailyByIp.set(ip, { day, count: count + 1 });
-  return false;
-}
 
 function getOutputText(data) {
   if (typeof data.output_text === 'string') return data.output_text;
@@ -174,6 +144,19 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({ error: 'AI is not configured yet.', code: 'OPENAI_API_KEY_MISSING' });
   }
 
+  if (tooLargeByHeader(req)) {
+    return res.status(413).json({ error: 'Request is too large.' });
+  }
+
+  // Shared Upstash limits run before any user lookup/quota consumption so abuse is
+  // rejected consistently across Vercel serverless instances.
+  const network = await enforceNetworkRateLimit(req);
+  if (!network.ok) {
+    if (network.retryAfter) res.setHeader('Retry-After', String(network.retryAfter));
+    res.setHeader('X-Network-RateLimit-Limit', String(NETWORK_DAILY_LIMIT));
+    return res.status(network.status).json({ error: network.error, code: network.code });
+  }
+
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON body.' }); }
@@ -192,28 +175,14 @@ module.exports = async function handler(req, res) {
         : `Create exactly one vocabulary entry for the English word or phrase: "${word}". Return JSON matching the schema. Give the standard IPA pronunciation for the most common English reading, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence that clearly demonstrates the meaning, and an accurate natural Arabic translation of that example. Use the most common part of speech and one of the allowed type codes.`
     });
   } else {
-    const filename = String(body.filename || '').replace(/[\\/]/g, '').slice(0, 160);
-    const ext = (filename.split('.').pop() || '').toLowerCase();
-    const fileData = String(body.fileData || '');
-
-    if (!filename || !ALLOWED_EXT.has(ext)) {
-      return res.status(400).json({ error: 'Unsupported file type. Use PDF, Word, PowerPoint, Excel, TXT, CSV, JSON, or Markdown.' });
-    }
-    if (!fileData) return res.status(400).json({ error: 'The file is empty.' });
-    if (!/^data:[^,]*;base64,/i.test(fileData)) {
-      return res.status(400).json({ error: 'The uploaded file data is invalid. Please choose the file again.' });
-    }
-
-    const comma = fileData.indexOf(',');
-    const base64 = comma >= 0 ? fileData.slice(comma + 1) : '';
-    const approxBytes = Math.floor(base64.length * 0.75);
-    if (approxBytes > MAX_FILE_BYTES) return res.status(413).json({ error: 'File is too large. Maximum size is 2.5 MB.' });
+    const checked = validateUploadedFile(body.filename, body.fileData, MAX_FILE_BYTES);
+    if (!checked.ok) return res.status(checked.status).json({ error: checked.error });
 
     content.push({
       type: 'input_text',
       text: `Read the attached file and extract up to ${MAX_FILE_WORDS} of the most useful English vocabulary words and phrases that are explicitly present in it. Do not invent vocabulary that is not in the file. Remove duplicates and ignore very common filler/function words, page numbers, isolated punctuation, URLs, and obvious metadata. Prioritize vocabulary that is useful for an English learner. For every extracted item return the standard IPA pronunciation, the most suitable part-of-speech code, a short learner-friendly English definition, a concise natural Arabic meaning, one short natural English example sentence, and an accurate natural Arabic translation of the example. Return JSON matching the schema.`
     });
-    content.push({ type: 'input_file', filename, file_data: fileData });
+    content.push({ type: 'input_file', filename: checked.filename, file_data: checked.fileData });
   }
 
   const quota = await authenticateAndConsumeQuota(req);
@@ -224,17 +193,6 @@ module.exports = async function handler(req, res) {
     return res.status(quota.status).json({ error: quota.error, code: quota.code });
   }
   res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
-
-  const ip = String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
-  if (minuteRateLimited(ip)) {
-    res.setHeader('Retry-After', '60');
-    return res.status(429).json({ error: 'Too many AI requests from this network. Please wait a minute.', code: 'AI_NETWORK_RATE_LIMIT' });
-  }
-  if (dailyIpRateLimited(ip)) {
-    const retryAfter = secondsUntilUtcMidnight();
-    res.setHeader('Retry-After', String(retryAfter));
-    return res.status(429).json({ error: 'AI usage limit reached for this network today. Please try again tomorrow.', code: 'NETWORK_AI_LIMIT' });
-  }
 
   try {
     const response = await fetch('https://api.openai.com/v1/responses', {

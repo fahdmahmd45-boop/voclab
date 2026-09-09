@@ -1,0 +1,9 @@
+{
+  "name": "voclab",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@upstash/ratelimit": "2.0.8",
+    "@upstash/redis": "1.38.4"
+  }
+}

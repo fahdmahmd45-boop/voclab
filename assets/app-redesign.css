@@ -1,0 +1,197 @@
+/* VOC_APP_REDESIGN_V1 — presentation-only overrides; no learning logic */
+
+:root{
+  --voc-shell:1120px;
+  --voc-radius-xl:22px;
+  --voc-radius-lg:18px;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% -20%,color-mix(in srgb,var(--amber) 7%,transparent),transparent 36%),
+    var(--bg);
+}
+
+header{
+  padding:12px 20px;
+  background:color-mix(in srgb,var(--hd) 90%,transparent);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.hwrap{max-width:var(--voc-shell);gap:18px}
+.hwrap>h1{font-size:28px;letter-spacing:.15px}
+.hwrap>h1 small{font-size:9px;letter-spacing:.18em;margin-top:6px}
+.hbtns{gap:7px}
+.iconbtn{min-height:38px;border-radius:11px;background:color-mix(in srgb,var(--card) 92%,transparent)}
+.prog{font-size:11px}
+.prog b{font-size:18px}
+
+main{max-width:var(--voc-shell);padding:28px 22px 76px}
+
+.tabs{
+  gap:6px;
+  padding:5px;
+  margin-bottom:28px;
+  border-radius:15px;
+  background:color-mix(in srgb,var(--card) 88%,transparent);
+  box-shadow:var(--shadow);
+}
+.tab{padding:10px 12px;border-radius:10px;font-size:12.5px}
+.tab.on{box-shadow:0 2px 10px color-mix(in srgb,var(--amber) 18%,transparent)}
+
+/* Home becomes the actual product dashboard — no marketing section. */
+.home{
+  width:100%;
+  max-width:none;
+  display:grid;
+  grid-template-columns:minmax(0,1.06fr) minmax(300px,.94fr);
+  grid-template-areas:
+    "eyebrow streak"
+    "greet streak"
+    "quote progress"
+    "head head"
+    "decks decks";
+  column-gap:28px;
+  row-gap:8px;
+}
+.home>.eyebrow{grid-area:eyebrow;align-self:end;margin-top:14px}
+.home>.hgreet{
+  grid-area:greet;
+  font-size:clamp(42px,6vw,66px);
+  line-height:.98;
+  letter-spacing:-.035em;
+  margin:0;
+  max-width:620px;
+}
+.home>.hquote{
+  grid-area:quote;
+  font-size:18px;
+  line-height:1.55;
+  margin:8px 0 22px;
+  max-width:600px;
+}
+.home>#streakBox{
+  grid-area:streak;
+  align-self:stretch;
+  margin:0!important;
+  padding:22px!important;
+  border-radius:var(--voc-radius-lg)!important;
+  background:var(--card);
+  box-shadow:var(--shadow);
+  min-height:128px;
+}
+.home>#streakBox>span{font-size:31px!important}
+.home>#streakBox>div>div:first-child{font-family:var(--en);font-size:24px;font-weight:600!important}
+.home>#streakBox>div>div:last-child{font-size:12px!important;margin-top:5px}
+.home>.hprog{
+  grid-area:progress;
+  margin:0 0 22px;
+  padding:18px 20px;
+  border-radius:var(--voc-radius-lg);
+  min-height:94px;
+}
+.home>.hprog b{font-size:22px}
+.home>.hhead{grid-area:head;margin:12px 0 6px}
+.home>.hhead h3{font-size:12px;color:var(--tx);letter-spacing:.11em}
+.home>.hgrid{grid-area:decks}
+.home>.hrestore{grid-column:1/-1}
+
+.hgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.hcard{
+  min-height:150px;
+  padding:20px;
+  border-radius:var(--voc-radius-lg);
+  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 97%,var(--amber) 3%),var(--card));
+  overflow:hidden;
+}
+.hcard::after{
+  content:'';
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:2px;
+  opacity:.55;
+  background:linear-gradient(90deg,transparent,var(--amber),transparent);
+}
+.hcard:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(0,0,0,.08)}
+.ht{font-family:var(--en);font-size:20px;margin-top:15px;font-weight:600}
+.hsub{font-size:12px;margin-top:3px}
+.hcount{margin-top:15px}
+.lvl{padding:4px 9px;border-radius:8px}
+
+/* Focused learning modes keep the same engine, with a calmer larger canvas. */
+.fcwrap,.qwrap,.dwrap{max-width:680px}
+.fcard,.qword,.tprompt,.dcard,.myform{
+  border-radius:var(--voc-radius-lg);
+  box-shadow:var(--shadow);
+}
+.fcard{min-height:340px;padding:34px}
+.fcard .word{font-size:52px}
+.qword,.tprompt{padding:32px}
+.qword .word{font-size:44px}
+.dcard{padding:24px}
+.dword{font-size:40px}
+.myform{max-width:760px;margin-left:auto;margin-right:auto;padding:22px}
+
+/* Browse stays information-dense but feels like the same product. */
+#p-list{max-width:900px;margin:0 auto}
+.row{border-radius:15px;padding:15px 17px;margin-bottom:9px}
+.row:hover{transform:translateY(-1px)}
+.lvlstat{background:var(--card);box-shadow:var(--shadow)}
+
+/* Buttons and fields */
+select,.search,.tin,.myin{border-radius:11px;background:color-mix(in srgb,var(--card) 96%,transparent)}
+.next,.addbtn{border-radius:11px;min-height:44px}
+.opt{border-radius:13px;padding:14px 17px}
+.fcbtns button{border-radius:12px;min-height:46px}
+
+/* Side drawer */
+.drawer{width:330px;padding:26px 20px;background:color-mix(in srgb,var(--hd) 97%,transparent)}
+
+/* Existing Instagram/footer peripheral UI follows the wider shell. */
+.voc-footer-inner{max-width:var(--voc-shell)!important}
+
+@media(max-width:900px){
+  main{padding-top:22px}
+  .home{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "eyebrow"
+      "greet"
+      "quote"
+      "streak"
+      "progress"
+      "head"
+      "decks";
+    gap:8px;
+  }
+  .home>#streakBox{min-height:0}
+  .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:640px){
+  body{background:var(--bg)}
+  header{padding-inline:10px}
+  .hwrap{gap:7px}
+  .hwrap>h1{font-size:22px}
+  main{padding:14px 12px 58px}
+  .tabs{margin-bottom:20px;gap:3px;padding:4px}
+  .tab{font-size:11px;padding-block:9px}
+  .home>.hgreet{font-size:42px}
+  .home>.hquote{font-size:16px;margin-bottom:12px}
+  .home>#streakBox{padding:16px!important}
+  .home>.hprog{padding:15px 16px}
+  .hgrid{gap:9px}
+  .hcard{min-height:132px;padding:15px;border-radius:15px}
+  .ht{font-size:17px;margin-top:11px}
+  .fcard{min-height:300px;padding:24px 18px}
+  .fcard .word{font-size:38px}
+  .qword,.tprompt{padding:24px 16px}
+}
+
+@media(max-width:430px){
+  .home>.hgreet{font-size:38px}
+  .hgrid{grid-template-columns:1fr 1fr}
+  .hcard{min-height:124px;padding:14px 13px}
+  .ht{font-size:16px}
+  .hsub,.hcount{font-size:10.5px}
+}

@@ -9,6 +9,7 @@ const MAX_CONTENT_LENGTH_BYTES = 3_600_000;
 const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx','ppt','pptx','xls','xlsx']);
 
 let limiters;
+const fallbackNetworkLimits = new Map();
 
 function getClientIp(req) {
   const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
@@ -50,18 +51,68 @@ function retryAfterSeconds(reset) {
   return Math.max(1, Math.ceil((resetMs - Date.now()) / 1000));
 }
 
-async function enforceNetworkRateLimit(req) {
-  const active = getLimiters();
-  if (!active) {
+function enforceFallbackNetworkRateLimit(ip) {
+  const now = Date.now();
+  const minuteWindow = 60_000;
+  const dayWindow = 86_400_000;
+  let entry = fallbackNetworkLimits.get(ip);
+
+  if (!entry) {
+    entry = { minuteStart: now, minuteCount: 0, dayStart: now, dayCount: 0, touchedAt: now };
+    fallbackNetworkLimits.set(ip, entry);
+  }
+
+  if (now - entry.minuteStart >= minuteWindow) {
+    entry.minuteStart = now;
+    entry.minuteCount = 0;
+  }
+  if (now - entry.dayStart >= dayWindow) {
+    entry.dayStart = now;
+    entry.dayCount = 0;
+  }
+
+  if (entry.minuteCount >= NETWORK_MINUTE_LIMIT) {
     return {
       ok: false,
-      status: 503,
-      code: 'NETWORK_RATE_LIMIT_UNAVAILABLE',
-      error: 'AI network protection is not configured.'
+      status: 429,
+      code: 'AI_NETWORK_RATE_LIMIT',
+      error: 'Too many AI requests from this network. Please wait a minute.',
+      retryAfter: Math.max(1, Math.ceil((entry.minuteStart + minuteWindow - now) / 1000))
+    };
+  }
+  if (entry.dayCount >= NETWORK_DAILY_LIMIT) {
+    return {
+      ok: false,
+      status: 429,
+      code: 'NETWORK_AI_LIMIT',
+      error: 'AI usage limit reached for this network today. Please try again later.',
+      retryAfter: Math.max(1, Math.ceil((entry.dayStart + dayWindow - now) / 1000))
     };
   }
 
+  entry.minuteCount += 1;
+  entry.dayCount += 1;
+  entry.touchedAt = now;
+
+  if (fallbackNetworkLimits.size > 5000) {
+    for (const [key, value] of fallbackNetworkLimits) {
+      if (now - value.touchedAt > dayWindow) fallbackNetworkLimits.delete(key);
+      if (fallbackNetworkLimits.size <= 4000) break;
+    }
+  }
+
+  return { ok: true, ip, fallback: true };
+}
+
+async function enforceNetworkRateLimit(req) {
+  const active = getLimiters();
   const ip = getClientIp(req);
+
+  if (!active) {
+    console.warn('Upstash rate limit is not configured; using per-instance fallback limiter.');
+    return enforceFallbackNetworkRateLimit(ip);
+  }
+
   try {
     const minute = await active.minute.limit(ip);
     if (!minute.success) {
@@ -88,12 +139,7 @@ async function enforceNetworkRateLimit(req) {
     return { ok: true, ip };
   } catch (error) {
     console.error('Upstash rate limit error', error?.message || error);
-    return {
-      ok: false,
-      status: 503,
-      code: 'NETWORK_RATE_LIMIT_UNAVAILABLE',
-      error: 'AI network protection is temporarily unavailable.'
-    };
+    return enforceFallbackNetworkRateLimit(ip);
   }
 }
 

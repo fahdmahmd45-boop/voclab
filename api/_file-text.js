@@ -3,7 +3,7 @@
 const pdfParse = require('pdf-parse');
 const JSZip = require('jszip');
 
-const MAX_MODEL_FILE_CHARS = 18000;
+const MAX_MODEL_FILE_CHARS = 12000;
 const MIN_USEFUL_TEXT_CHARS = 24;
 
 function decodeDataUrl(fileData) {

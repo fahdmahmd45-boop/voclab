@@ -7,7 +7,8 @@ const {
 
 const MAX_FILE_BYTES = 2500000;
 const MAX_FILE_WORDS = 40;
-const DAILY_VISITOR_LIMIT = 10;
+const WORD_CREDIT_COST = 1;
+const FILE_CREDIT_COST = 5;
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hknecvleujjdyoqtwaar.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_9GOPoqC3kpfLVcvQoSXXFQ_gXcGK6om';
@@ -71,7 +72,7 @@ function cleanWords(words, limit) {
   return out;
 }
 
-async function authenticateAndConsumeQuota(req) {
+async function authenticateAndConsumeQuota(req, creditCost) {
   const auth = String(req.headers.authorization || '').trim();
   if (!/^Bearer\s+\S+$/i.test(auth)) {
     return { ok: false, status: 401, error: 'Sign in to use AI.', code: 'AUTH_REQUIRED' };
@@ -102,7 +103,7 @@ async function authenticateAndConsumeQuota(req) {
     quotaResponse = await fetch(`${SUPABASE_URL}/functions/v1/consume-ai-quota`, {
       method: 'POST',
       headers: commonHeaders,
-      body: '{}'
+      body: JSON.stringify({ cost: creditCost })
     });
   } catch {
     return { ok: false, status: 503, error: 'AI usage protection is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' };
@@ -113,25 +114,45 @@ async function authenticateAndConsumeQuota(req) {
   }
   const raw = await quotaResponse.json().catch(() => null);
   const quota = Array.isArray(raw) ? raw[0] : raw;
+  const accountPlan = quota?.plan === 'pro' ? 'pro' : 'free';
+  const monthlyLimit = Math.max(0, Number(quota?.monthly_limit || (accountPlan === 'pro' ? 300 : 30)));
+  const remaining = Math.max(0, Number(quota?.remaining_monthly ?? quota?.remaining_today ?? 0));
+
   if (!quota || quota.allowed !== true) {
     const code = String(quota?.code || 'AI_RATE_LIMIT');
     const retryAfter = Math.max(1, Number(quota?.retry_after_seconds || 60));
+    let error = 'Too many AI requests. Please wait a minute.';
+    let status = 429;
+
+    if (code === 'MONTHLY_AI_CREDIT_LIMIT') {
+      error = accountPlan === 'pro'
+        ? 'Your monthly Pro AI credits are used. They reset next month.'
+        : 'Your free AI credits are used for this month. Free includes 30 credits per month. Contact @voclab_sa on Instagram to upgrade to Pro.';
+    } else if (code === 'INVALID_AI_COST') {
+      status = 500;
+      error = 'AI usage protection rejected this request.';
+    }
+
     return {
       ok: false,
-      status: 429,
+      status,
       retryAfter,
-      remaining: Math.max(0, Number(quota?.remaining_today || 0)),
+      remaining,
+      monthlyLimit,
+      plan: accountPlan,
+      cost: creditCost,
       code,
-      error: code === 'DAILY_AI_LIMIT'
-        ? 'Daily AI limit reached. You can use AI up to 10 times per day. Please try again tomorrow.'
-        : 'Too many AI requests. Please wait a minute.'
+      error
     };
   }
 
   return {
     ok: true,
     userId: user.id,
-    remaining: Math.max(0, Number(quota.remaining_today || 0))
+    remaining,
+    monthlyLimit,
+    plan: accountPlan,
+    cost: Math.max(1, Number(quota.cost || creditCost))
   };
 }
 
@@ -163,6 +184,7 @@ module.exports = async function handler(req, res) {
   }
   body = body || {};
   const mode = body.mode === 'file' ? 'file' : 'word';
+  const creditCost = mode === 'file' ? FILE_CREDIT_COST : WORD_CREDIT_COST;
 
   const content = [];
   if (mode === 'word') {
@@ -185,14 +207,22 @@ module.exports = async function handler(req, res) {
     content.push({ type: 'input_file', filename: checked.filename, file_data: checked.fileData });
   }
 
-  const quota = await authenticateAndConsumeQuota(req);
-  res.setHeader('X-RateLimit-Limit', String(DAILY_VISITOR_LIMIT));
+  const quota = await authenticateAndConsumeQuota(req, creditCost);
+  if (quota.monthlyLimit != null) {
+    res.setHeader('X-RateLimit-Limit', String(quota.monthlyLimit));
+    res.setHeader('X-AI-Credit-Limit', String(quota.monthlyLimit));
+  }
+  if (quota.remaining != null) {
+    res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
+    res.setHeader('X-AI-Credits-Remaining', String(quota.remaining));
+  }
+  res.setHeader('X-AI-Credit-Cost', String(creditCost));
+  if (quota.plan) res.setHeader('X-AI-Plan', quota.plan);
+
   if (!quota.ok) {
     if (quota.retryAfter) res.setHeader('Retry-After', String(quota.retryAfter));
-    if (quota.remaining != null) res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
     return res.status(quota.status).json({ error: quota.error, code: quota.code });
   }
-  res.setHeader('X-RateLimit-Remaining', String(quota.remaining));
 
   try {
     const response = await fetch('https://api.openai.com/v1/responses', {
@@ -230,7 +260,15 @@ module.exports = async function handler(req, res) {
     try { parsed = JSON.parse(text); } catch { return res.status(502).json({ error: 'AI returned an unreadable response.' }); }
     const words = cleanWords(parsed.words, mode === 'file' ? MAX_FILE_WORDS : 1);
     if (!words.length) return res.status(422).json({ error: mode === 'file' ? 'No useful English vocabulary was found in this file.' : 'Could not build this vocabulary entry.' });
-    return res.status(200).json({ words, usage: { remaining_today: quota.remaining, daily_limit: DAILY_VISITOR_LIMIT } });
+    return res.status(200).json({
+      words,
+      usage: {
+        remaining_monthly: quota.remaining,
+        monthly_limit: quota.monthlyLimit,
+        credits_used: quota.cost,
+        plan: quota.plan
+      }
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'AI service is temporarily unavailable.' });

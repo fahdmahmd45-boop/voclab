@@ -69,6 +69,15 @@
     document.head.appendChild(link);
   }
 
+  function loadSubscriptionUx(){
+    if (document.getElementById('vocSubscriptionUxScript')) return;
+    const script = document.createElement('script');
+    script.id = 'vocSubscriptionUxScript';
+    script.src = '/assets/subscription-ux.js';
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
   function injectStyles(){
     if (document.getElementById('vocInstagramFooterStyles')) return;
     const style = document.createElement('style');
@@ -168,6 +177,7 @@
     loadCompactMobileTabs();
     loadHomeUxRedesign();
     loadBeVietnamProPreview();
+    loadSubscriptionUx();
     injectStyles();
     createInstagramHeader();
     createFooter();

@@ -7,6 +7,25 @@
   const INSTAGRAM_URL = 'https://www.instagram.com/voclab_sa/';
   const ICON_INSTAGRAM = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>';
 
+  function loadSiteIcon(){
+    let icon = document.getElementById('vocSiteIcon');
+    if (!icon) {
+      icon = document.createElement('link');
+      icon.id = 'vocSiteIcon';
+      icon.rel = 'icon';
+      icon.type = 'image/svg+xml';
+      document.head.appendChild(icon);
+    }
+    icon.href = '/favicon.svg?v=20260911';
+
+    if (!document.querySelector('meta[name="theme-color"]')) {
+      const theme = document.createElement('meta');
+      theme.name = 'theme-color';
+      theme.content = '#0D0E11';
+      document.head.appendChild(theme);
+    }
+  }
+
   function loadAppRedesign(){
     if (document.getElementById('vocAppRedesignStyles')) return;
     const link = document.createElement('link');
@@ -171,6 +190,7 @@
   function start(){
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
+    loadSiteIcon();
     loadAppRedesign();
     loadAiTabsPolish();
     loadOriginalWidthTabsFix();

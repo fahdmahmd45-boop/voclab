@@ -92,10 +92,14 @@ on conflict (id) do update
       updated_at = now();
 
 -- Server-enforced AI quota. Clients cannot read or modify this table directly.
+-- Legacy daily columns are retained for compatibility/observability; monthly credits
+-- are the billing/plan limit used by consume_voclab_ai_quota.
 create table if not exists public.ai_usage_counters (
   user_id uuid primary key references auth.users(id) on delete cascade,
   usage_day date not null default ((now() at time zone 'utc')::date),
   day_count integer not null default 0 check (day_count >= 0),
+  usage_month date not null default date_trunc('month', now() at time zone 'utc')::date,
+  month_credits integer not null default 0 check (month_credits >= 0),
   minute_bucket timestamptz not null default date_trunc('minute', now()),
   minute_count integer not null default 0 check (minute_count >= 0),
   updated_at timestamptz not null default now()
@@ -111,15 +115,23 @@ grant all on table public.ai_usage_counters to service_role;
 comment on table public.ai_usage_counters is
   'No client RLS policies by design: anon/authenticated privileges are revoked; service_role-only access.';
 
--- Remove the legacy no-argument RPC if it exists so there is no client-callable overload.
+-- Remove legacy overloads so there is no client-callable quota RPC.
 drop function if exists public.consume_voclab_ai_quota();
+drop function if exists public.consume_voclab_ai_quota(uuid);
 
-create or replace function public.consume_voclab_ai_quota(p_user_id uuid)
+create or replace function public.consume_voclab_ai_quota(
+  p_user_id uuid,
+  p_cost integer default 1
+)
 returns table (
   allowed boolean,
   remaining_today integer,
   retry_after_seconds integer,
-  code text
+  code text,
+  remaining_monthly integer,
+  monthly_limit integer,
+  plan text,
+  cost integer
 )
 language plpgsql
 security definer
@@ -127,21 +139,47 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := p_user_id;
+  v_cost integer := p_cost;
   v_now timestamptz := clock_timestamp();
   v_day date := (v_now at time zone 'utc')::date;
+  v_month date := date_trunc('month', v_now at time zone 'utc')::date;
+  v_next_month timestamptz := ((date_trunc('month', v_now at time zone 'utc') + interval '1 month') at time zone 'utc');
   v_minute timestamptz := date_trunc('minute', v_now);
   v_row public.ai_usage_counters%rowtype;
-  v_daily_limit constant integer := 10;
+  v_plan text := 'free';
+  v_monthly_limit integer;
   v_minute_limit constant integer := 5;
   v_retry integer;
+  v_remaining integer;
 begin
   if v_uid is null then
-    return query select false, 0, 0, 'AUTH_REQUIRED'::text;
+    return query select false, 0, 0, 'AUTH_REQUIRED'::text, 0, 0, 'free'::text, 0;
     return;
   end if;
 
-  insert into public.ai_usage_counters (user_id, usage_day, day_count, minute_bucket, minute_count)
-  values (v_uid, v_day, 0, v_minute, 0)
+  if v_cost not in (1, 5) then
+    return query select false, 0, 0, 'INVALID_AI_COST'::text, 0, 0, 'free'::text, v_cost;
+    return;
+  end if;
+
+  select coalesce(p.plan, 'free')
+    into v_plan
+  from public.profiles p
+  where p.id = v_uid;
+
+  v_plan := coalesce(v_plan, 'free');
+  v_monthly_limit := case when v_plan = 'pro' then 300 else 30 end;
+
+  insert into public.ai_usage_counters (
+    user_id,
+    usage_day,
+    day_count,
+    usage_month,
+    month_credits,
+    minute_bucket,
+    minute_count
+  )
+  values (v_uid, v_day, 0, v_month, 0, v_minute, 0)
   on conflict (user_id) do nothing;
 
   select * into v_row
@@ -149,26 +187,37 @@ begin
   where user_id = v_uid
   for update;
 
+  if v_row.usage_month <> v_month then
+    v_row.usage_month := v_month;
+    v_row.month_credits := 0;
+  end if;
+
   if v_row.usage_day <> v_day then
     v_row.usage_day := v_day;
     v_row.day_count := 0;
-    v_row.minute_bucket := v_minute;
-    v_row.minute_count := 0;
-  elsif v_row.minute_bucket <> v_minute then
+  end if;
+
+  if v_row.minute_bucket <> v_minute then
     v_row.minute_bucket := v_minute;
     v_row.minute_count := 0;
   end if;
 
-  if v_row.day_count >= v_daily_limit then
-    v_retry := greatest(60, ceil(extract(epoch from (((v_day + 1)::timestamp at time zone 'utc') - v_now)))::integer);
+  v_remaining := greatest(0, v_monthly_limit - v_row.month_credits);
+
+  if v_row.month_credits + v_cost > v_monthly_limit then
+    v_retry := greatest(60, ceil(extract(epoch from (v_next_month - v_now)))::integer);
     update public.ai_usage_counters
       set usage_day = v_row.usage_day,
           day_count = v_row.day_count,
+          usage_month = v_row.usage_month,
+          month_credits = v_row.month_credits,
           minute_bucket = v_row.minute_bucket,
           minute_count = v_row.minute_count,
           updated_at = v_now
       where user_id = v_uid;
-    return query select false, 0, v_retry, 'DAILY_AI_LIMIT'::text;
+
+    return query select false, v_remaining, v_retry, 'MONTHLY_AI_CREDIT_LIMIT'::text,
+      v_remaining, v_monthly_limit, v_plan, v_cost;
     return;
   end if;
 
@@ -177,28 +226,37 @@ begin
     update public.ai_usage_counters
       set usage_day = v_row.usage_day,
           day_count = v_row.day_count,
+          usage_month = v_row.usage_month,
+          month_credits = v_row.month_credits,
           minute_bucket = v_row.minute_bucket,
           minute_count = v_row.minute_count,
           updated_at = v_now
       where user_id = v_uid;
-    return query select false, greatest(0, v_daily_limit - v_row.day_count), v_retry, 'AI_RATE_LIMIT'::text;
+
+    return query select false, v_remaining, v_retry, 'AI_RATE_LIMIT'::text,
+      v_remaining, v_monthly_limit, v_plan, v_cost;
     return;
   end if;
 
   v_row.day_count := v_row.day_count + 1;
+  v_row.month_credits := v_row.month_credits + v_cost;
   v_row.minute_count := v_row.minute_count + 1;
+  v_remaining := greatest(0, v_monthly_limit - v_row.month_credits);
 
   update public.ai_usage_counters
     set usage_day = v_row.usage_day,
         day_count = v_row.day_count,
+        usage_month = v_row.usage_month,
+        month_credits = v_row.month_credits,
         minute_bucket = v_row.minute_bucket,
         minute_count = v_row.minute_count,
         updated_at = v_now
     where user_id = v_uid;
 
-  return query select true, greatest(0, v_daily_limit - v_row.day_count), 0, null::text;
+  return query select true, v_remaining, 0, null::text,
+    v_remaining, v_monthly_limit, v_plan, v_cost;
 end;
 $$;
 
-revoke all on function public.consume_voclab_ai_quota(uuid) from public, anon, authenticated;
-grant execute on function public.consume_voclab_ai_quota(uuid) to service_role;
+revoke all on function public.consume_voclab_ai_quota(uuid, integer) from public, anon, authenticated;
+grant execute on function public.consume_voclab_ai_quota(uuid, integer) to service_role;

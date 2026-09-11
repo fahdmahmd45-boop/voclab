@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "dependencies": {
     "@upstash/ratelimit": "2.0.8",
-    "@upstash/redis": "1.38.4"
+    "@upstash/redis": "1.38.4",
+    "jszip": "3.10.1",
+    "pdf-parse": "1.1.1"
   }
 }

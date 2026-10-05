@@ -543,18 +543,11 @@ function checkType(){
 // VOC_AI_ADDWORD_V1
 // VOC_AI_DETAILS_V2
 let aiDraft=[],aiNotice='';
-const AI_FILE_MIME={
-  pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  txt:'text/plain',csv:'text/csv',json:'application/json',md:'text/markdown'
-};
 function aiSafe(v){return String(v==null?'':v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
 function aiDeckOptions(){return `<option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${d.id}">${aiSafe(d.t)}</option>`).join('')}`}
 function aiSetBusy(on,text){
-  const b=document.getElementById('aiWordBtn'),f=document.getElementById('aiFileBtn'),m=document.getElementById('aiStatus');
+  const b=document.getElementById('aiWordBtn'),m=document.getElementById('aiStatus');
   if(b){b.disabled=on;b.style.opacity=on?'.55':'1'}
-  if(f){f.disabled=on;f.style.opacity=on?'.55':'1'}
   if(m&&text)m.textContent=text;
 }
 function aiErrorMessage(e){
@@ -577,32 +570,6 @@ async function aiGenerateWord(){
     aiDraft=d.words||[];aiNotice='';renderAiPreview();
   }catch(e){const m=document.getElementById('aiStatus');if(m)m.textContent=aiErrorMessage(e)}
   finally{aiSetBusy(false)}
-}
-function aiNormalizeFileData(file,data){
-  let out=String(data||'');
-  if(/^data:;base64,/i.test(out)){
-    const ext=(String(file&&file.name||'').split('.').pop()||'').toLowerCase();
-    const mime=AI_FILE_MIME[ext]||'application/octet-stream';
-    out=out.replace(/^data:;base64,/i,`data:${mime};base64,`);
-  }
-  return out;
-}
-function aiReadFile(input){
-  const file=input.files&&input.files[0];if(!file)return;
-  if(file.size>2500000){const m=document.getElementById('aiStatus');if(m)m.textContent='File is too large. Maximum size is 2.5 MB.';input.value='';return}
-  aiSetBusy(true,'Reading and extracting vocabulary…');
-  const r=new FileReader();
-  r.onload=async()=>{
-    try{
-      const fileData=aiNormalizeFileData(file,r.result);
-      if(!/^data:[^,]*;base64,/i.test(fileData))throw {error:'Could not encode this file. Please choose it again.'};
-      const d=await aiPost({mode:'file',filename:file.name,fileData});
-      aiDraft=d.words||[];aiNotice='';renderAiPreview();
-    }catch(e){const m=document.getElementById('aiStatus');if(m)m.textContent=aiErrorMessage(e)}
-    finally{input.value='';aiSetBusy(false)}
-  };
-  r.onerror=()=>{const m=document.getElementById('aiStatus');if(m)m.textContent='Could not read this file.';input.value='';aiSetBusy(false)};
-  r.readAsDataURL(file);
 }
 function aiRemove(i){aiDraft.splice(i,1);renderAiPreview()}
 function renderAiPreview(){
@@ -657,8 +624,6 @@ function renderMy(){
     <div class="mygrid">
       <input class="myin full" id="newWordInput" dir="ltr" autocomplete="off" autocapitalize="off" placeholder="Type an English word or phrase">
       <button class="addbtn" id="aiWordBtn" onclick="aiGenerateWord()">Generate with AI</button>
-      <input type="file" id="aiFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.json,.md" style="display:none" onchange="aiReadFile(this)">
-      <button class="addbtn" id="aiFileBtn" style="background:transparent;border:1px solid var(--amber);color:var(--amber)" onclick="document.getElementById('aiFile').click()">Upload a file and extract vocabulary</button>
       <div class="full" id="aiStatus" style="font-size:13px;color:var(--mut);min-height:20px">${aiSafe(aiNotice)}</div>
     </div>
     <div id="aiPreview"></div>
@@ -672,8 +637,6 @@ function renderMy(){
       </select>
       <textarea class="myin full" id="mPaste" dir="ltr" rows="4" spellcheck="false" style="resize:vertical;font-family:monospace;font-size:12px" placeholder='["MY","word","noun","المعنى","Example sentence."],'></textarea>
       <button class="addbtn" onclick="pasteImport()">Import pasted words</button>
-      <input type="file" id="mFile" accept=".txt,.json,.csv,.js" style="display:none" onchange="fileImport(this)">
-      <button class="addbtn" style="background:transparent;border:1px solid var(--amber);color:var(--amber)" onclick="document.getElementById('mFile').click()">Import local text file</button>
       <div class="full" id="mPasteMsg" style="font-size:13px;opacity:.8"></div>
     </div>
   </details>
@@ -681,7 +644,7 @@ function renderMy(){
   renderAiPreview();
   const ni=document.getElementById('newWordInput');if(ni)ni.addEventListener('keydown',e=>{if(e.key==='Enter')aiGenerateWord()});
   const list=document.getElementById('myList');
-  if(!myWords.length){list.innerHTML='<div class="empty">No added words yet — generate a word or upload a vocabulary file above.</div>';return}
+  if(!myWords.length){list.innerHTML='<div class="empty">No added words yet — generate a word above or add words manually.</div>';return}
   list.innerHTML=myWords.map(w=>{
     const id=kid(w),isK=known.has(id);
     return `<div class="row ${isK?'known':''}">

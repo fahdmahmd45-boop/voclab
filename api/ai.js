@@ -229,8 +229,14 @@ module.exports = async function handler(req, res) {
     try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON body.' }); }
   }
   body = body || {};
-  const mode = body.mode === 'file' ? 'file' : 'word';
-  const creditCost = mode === 'file' ? FILE_CREDIT_COST : WORD_CREDIT_COST;
+  if (body.mode === 'file') {
+    return res.status(410).json({
+      error: 'File analysis is no longer available. Use AI Search for words and phrases.',
+      code: 'FILE_ANALYSIS_DISABLED'
+    });
+  }
+  const mode = 'word';
+  const creditCost = WORD_CREDIT_COST;
 
   const content = [];
   let fileMeta = null;

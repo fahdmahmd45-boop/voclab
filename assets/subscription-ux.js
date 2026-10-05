@@ -52,9 +52,9 @@
     note.className = 'voc-ai-plan-note';
     note.dataset.vocSubscriptionNote = '1';
     if (plan === 'pro') {
-      note.innerHTML = '<strong>Pro AI</strong><span>300 credits / month · Word search 1 credit · File analysis 5 credits</span>';
+      note.innerHTML = '<strong>Pro AI</strong><span>300 credits / month · AI Search uses 1 credit per word or phrase</span>';
     } else {
-      note.innerHTML = '<strong>Free AI</strong><span>30 credits / month · Word search 1 credit · File analysis 5 credits</span>';
+      note.innerHTML = '<strong>Free AI</strong><span>30 credits / month · AI Search uses 1 credit per word or phrase</span>';
     }
     return note;
   }

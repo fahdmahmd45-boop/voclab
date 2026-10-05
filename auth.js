@@ -21,6 +21,7 @@
 
   const iconUser = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>';
   const iconClose = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"></path></svg>';
+  const iconGoogle = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.23c0-.71-.06-1.22-.2-1.75H12v3.17h5.37a4.7 4.7 0 0 1-1.99 3.04l-.02.11 2.89 2.2.2.02c1.83-1.66 2.9-4.1 2.9-6.79Z"/><path fill="#34A853" d="M12 21.5c2.62 0 4.82-.85 6.43-2.48l-3.07-2.33c-.82.56-1.93.95-3.36.95-2.51 0-4.64-1.66-5.4-3.95l-.1.01-3 2.28-.04.1A9.72 9.72 0 0 0 12 21.5Z"/><path fill="#FBBC05" d="M6.6 13.69A5.8 5.8 0 0 1 6.29 12c0-.59.11-1.16.3-1.69v-.1L3.55 7.9l-.1.05A9.38 9.38 0 0 0 2.5 12c0 1.46.35 2.83.96 4.05l3.14-2.36Z"/><path fill="#EA4335" d="M12 6.36c1.82 0 3.05.77 3.75 1.4l2.74-2.62C16.8 3.6 14.62 2.5 12 2.5a9.72 9.72 0 0 0-8.54 5.45l3.13 2.36C7.36 8.02 9.49 6.36 12 6.36Z"/></svg>';
 
   function injectStyles() {
     if (document.getElementById('vocAuthStyles')) return;
@@ -72,6 +73,12 @@
       .voc-auth-pro-card p{font-size:12px;color:var(--mut);line-height:1.55}
       .voc-auth-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--mut)}
       .voc-auth-dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+      .voc-auth-google{width:100%;min-height:46px;border:1px solid color-mix(in srgb,var(--line) 86%,#fff);border-radius:11px;background:#fff;color:#202124;display:flex;align-items:center;justify-content:center;gap:10px;font:600 14px var(--ui);cursor:pointer;transition:transform .1s,box-shadow .15s,border-color .15s;margin-top:4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+      .voc-auth-google:hover{border-color:#c7c9cc;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+      .voc-auth-google:active{transform:scale(.985)}
+      .voc-auth-google:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+      .voc-auth-divider{display:flex;align-items:center;gap:10px;margin:17px 0 14px;color:var(--mut);font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:600}
+      .voc-auth-divider::before,.voc-auth-divider::after{content:"";height:1px;background:var(--line);flex:1}
       @media(max-width:540px){.voc-auth-btn .voc-auth-label-text{display:none}.voc-auth-btn{min-width:0;padding:8px 10px}.voc-auth-card{padding:20px;border-radius:18px}.voc-auth-title{font-size:27px}}
     `;
     document.head.appendChild(style);
@@ -134,6 +141,7 @@
     const raw = String(error?.message || error || 'Something went wrong. Please try again.');
     const lower = raw.toLowerCase();
     if (lower.includes('email provider') || lower.includes('email signups')) return `Email sign-in setup error: ${raw}`;
+    if (lower.includes('provider') && (lower.includes('enabled') || lower.includes('unsupported'))) return 'Google sign-in is not enabled yet. You can still use email sign-in.';
     if (lower.includes('rate limit') || lower.includes('too many')) return 'Too many attempts. Please wait a little before requesting another code.';
     if (lower.includes('token') || lower.includes('otp') || lower.includes('invalid')) return raw;
     if (lower.includes('captcha')) return 'Verification protection is required before another code can be sent.';
@@ -200,17 +208,39 @@
     }
 
     body.innerHTML = `
-      <div class="voc-auth-title" id="vocAuthDialogTitle">Continue with email</div>
-      <div class="voc-auth-sub">No password and no SMS fees. We’ll send a verification code to your email.</div>
+      <div class="voc-auth-title" id="vocAuthDialogTitle">Sign in to VocLab</div>
+      <div class="voc-auth-sub">Continue with Google for the fastest sign-in. Email verification is still available as a backup.</div>
+      <button type="button" class="voc-auth-google" id="vocGoogleBtn">${iconGoogle}<span>Continue with Google</span></button>
+      <div class="voc-auth-divider"><span>or use email</span></div>
       <label class="voc-auth-label" for="vocEmail">Email address</label>
       <div class="voc-auth-phone-wrap" style="grid-template-columns:1fr"><input class="voc-auth-input" id="vocEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address"></div>
-      <button type="button" class="voc-auth-primary" id="vocSendBtn">Send verification code</button>
+      <button type="button" class="voc-auth-secondary" id="vocSendBtn">Send verification code</button>
       <div class="voc-auth-error" id="vocAuthError"></div>
-      <div class="voc-auth-note">Check your inbox and spam folder for the verification code. New users are created automatically after verification.</div>
+      <div class="voc-auth-note">Google is the main sign-in method. Email uses a one-time verification code with no password.</div>
     `;
+    body.querySelector('#vocGoogleBtn').addEventListener('click', signInWithGoogle);
     const email = body.querySelector('#vocEmail');
     email.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendOtp(email.value); });
     body.querySelector('#vocSendBtn').addEventListener('click', () => sendOtp(email.value));
+  }
+
+  async function signInWithGoogle() {
+    if (!client) return;
+    const btn = document.getElementById('vocGoogleBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = `${iconGoogle}<span>Opening Google…</span>`; }
+    setError('');
+    const redirectTo = `${location.origin}${location.pathname || '/'}`;
+    const { error } = await client.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: { prompt: 'select_account' }
+      }
+    });
+    if (error) {
+      setError(friendlyError(error));
+      if (btn) { btn.disabled = false; btn.innerHTML = `${iconGoogle}<span>Continue with Google</span>`; }
+    }
   }
 
   async function sendOtp(rawEmail, isResend = false) {

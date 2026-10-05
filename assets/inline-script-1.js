@@ -619,16 +619,7 @@ function addAiDraft(){
 }
 function renderMy(){
   const el=document.getElementById('p-my');
-  el.innerHTML=`<div class="myform">
-    <h3>AI vocabulary</h3>
-    <div class="mygrid">
-      <input class="myin full" id="newWordInput" dir="ltr" autocomplete="off" autocapitalize="off" placeholder="Type an English word or phrase">
-      <button class="addbtn" id="aiWordBtn" onclick="aiGenerateWord()">Generate with AI</button>
-      <div class="full" id="aiStatus" style="font-size:13px;color:var(--mut);min-height:20px">${aiSafe(aiNotice)}</div>
-    </div>
-    <div id="aiPreview"></div>
-  </div>
-  <details class="myform" style="padding:0;overflow:hidden">
+  el.innerHTML=`<details class="myform" style="padding:0;overflow:hidden">
     <summary style="cursor:pointer;padding:16px 18px;font-weight:600">Manual import</summary>
     <div class="mygrid" style="padding:0 18px 18px">
       <select class="myin full" id="mDeck">
@@ -641,10 +632,8 @@ function renderMy(){
     </div>
   </details>
   <div id="myList"></div>`;
-  renderAiPreview();
-  const ni=document.getElementById('newWordInput');if(ni)ni.addEventListener('keydown',e=>{if(e.key==='Enter')aiGenerateWord()});
   const list=document.getElementById('myList');
-  if(!myWords.length){list.innerHTML='<div class="empty">No added words yet — generate a word above or add words manually.</div>';return}
+  if(!myWords.length){list.innerHTML='<div class="empty">No added words yet — add words from AI Search or add them manually.</div>';return}
   list.innerHTML=myWords.map(w=>{
     const id=kid(w),isK=known.has(id);
     return `<div class="row ${isK?'known':''}">

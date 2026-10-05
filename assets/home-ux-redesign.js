@@ -56,8 +56,10 @@
       const btn = event.target.closest('.voc-bottom-item');
       if (!btn) return;
       const target = btn.dataset.target;
-      if (target === 'search') openTab('dict');
-      else openTab(target);
+      if (target === 'search') {
+        openTab('dict');
+        setTimeout(() => document.getElementById('dIn')?.focus(), 0);
+      } else openTab(target);
       setTimeout(syncBottomNav, 0);
     });
     document.body.appendChild(nav);

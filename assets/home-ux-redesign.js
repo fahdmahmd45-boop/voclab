@@ -8,7 +8,7 @@
   const ICONS = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
     cards: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
     quiz: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 9a3.5 3.5 0 1 1 5.7 2.7c-1.3 1-2.2 1.6-2.2 3.3"/><path d="M12 19h.01"/><circle cx="12" cy="12" r="10"/></svg>',
     spelling: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></svg>',
     filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg>',
@@ -32,7 +32,7 @@
 
   function syncBottomNav() {
     const page = currentPage();
-    const active = page === 'dict' || page === 'list' ? 'home' : page === 'my' ? 'add' : page;
+    const active = page === 'dict' ? 'search' : page === 'list' || page === 'my' ? 'home' : page;
     document.querySelectorAll('.voc-bottom-item').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.target === active);
       btn.setAttribute('aria-current', btn.dataset.target === active ? 'page' : 'false');
@@ -48,7 +48,7 @@
     nav.innerHTML = `
       <button class="voc-bottom-item" data-target="home" type="button">${ICONS.home}<span>Home</span></button>
       <button class="voc-bottom-item" data-target="cards" type="button">${ICONS.cards}<span>Flashcards</span></button>
-      <button class="voc-bottom-item voc-add-fab" data-target="add" type="button" aria-label="Add word">${ICONS.plus}<span>Add</span></button>
+      <button class="voc-bottom-item voc-add-fab" data-target="search" type="button" aria-label="AI Search">${ICONS.search}<span>Search</span></button>
       <button class="voc-bottom-item" data-target="mcq" type="button">${ICONS.quiz}<span>Quiz</span></button>
       <button class="voc-bottom-item" data-target="type" type="button">${ICONS.spelling}<span>Spelling</span></button>`;
 
@@ -56,8 +56,10 @@
       const btn = event.target.closest('.voc-bottom-item');
       if (!btn) return;
       const target = btn.dataset.target;
-      if (target === 'add') openTab('my');
-      else openTab(target);
+      if (target === 'search') {
+        openTab('dict');
+        setTimeout(() => document.getElementById('dIn')?.focus(), 0);
+      } else openTab(target);
       setTimeout(syncBottomNav, 0);
     });
     document.body.appendChild(nav);

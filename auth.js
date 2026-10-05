@@ -177,7 +177,7 @@
           <div class="voc-auth-row"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>
           <div class="voc-auth-row"><div><small>Plan</small><strong>${plan === 'pro' ? 'VocLab Pro' : 'VocLab Free'}</strong></div><span class="voc-auth-plan">${plan === 'pro' ? 'PRO' : 'FREE'}</span></div>
         </div>
-        ${plan === 'pro' ? '' : `<div class="voc-auth-pro-card"><div class="voc-auth-pro-top"><strong>VocLab Pro</strong><span class="voc-auth-price">19 SAR / month</span></div><p>Higher AI limits and expanded file tools. Payments will be connected after the payment account is approved.</p><button type="button" class="voc-auth-primary" disabled>Upgrade coming soon</button></div>`}
+        ${plan === 'pro' ? '' : `<div class="voc-auth-pro-card"><div class="voc-auth-pro-top"><strong>VocLab Pro</strong><span class="voc-auth-price">15 SAR / month</span></div><p>300 AI credits each month. Annual plan: 100 SAR. Contact @voclab_sa on Instagram to activate Pro.</p><button type="button" class="voc-auth-primary" disabled>Upgrade coming soon</button></div>`}
         <button type="button" class="voc-auth-danger" id="vocAuthSignOut">Sign out</button>
         <div class="voc-auth-error" id="vocAuthError"></div>
       `;

@@ -795,7 +795,7 @@ let aiSearchPending=false;
 // Oxford entries already ship in the page. Show verified local meaning and
 // example immediately; only definitions/IPA need to wait for the AI request.
 function aiSearchInstantPreview(query){
-  const key=query.toLowerCase().replace(/\\s+/g,' ').trim();
+  const key=query.toLowerCase().replace(/\s+/g,' ').trim();
   const row=OXR.find(r=>String(r[1]||'').toLowerCase()===key);
   if(!row)return '';
   const word=String(row[1]),arabic=String(row[3]||'');

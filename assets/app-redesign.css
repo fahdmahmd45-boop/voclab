@@ -7,9 +7,7 @@
 }
 
 body{
-  background:
-    radial-gradient(circle at 50% -20%,color-mix(in srgb,var(--amber) 7%,transparent),transparent 36%),
-    var(--bg);
+  background:var(--bg);
 }
 
 header{
@@ -101,7 +99,7 @@ main{max-width:var(--voc-shell);padding:28px 22px 76px}
   min-height:150px;
   padding:20px;
   border-radius:var(--voc-radius-lg);
-  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 97%,var(--amber) 3%),var(--card));
+  background:var(--card);
   overflow:hidden;
 }
 .hcard::after{
@@ -109,8 +107,8 @@ main{max-width:var(--voc-shell);padding:28px 22px 76px}
   position:absolute;
   left:0;right:0;bottom:0;
   height:2px;
-  opacity:.55;
-  background:linear-gradient(90deg,transparent,var(--amber),transparent);
+  opacity:.45;
+  background:var(--line);
 }
 .hcard:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(0,0,0,.08)}
 .ht{font-family:var(--en);font-size:20px;margin-top:15px;font-weight:600}

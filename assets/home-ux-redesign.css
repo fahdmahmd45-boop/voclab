@@ -8,7 +8,20 @@ header{padding:11px 16px!important}
 .hwrap>h1 small{display:none!important}
 .prog{display:none!important}
 .hbtns{margin-left:auto;position:relative;gap:7px!important;flex:0 0 auto!important}
-#btnDrawer,#btnTheme,#btnExit,#vocInstagramHeader{display:none!important}
+#btnDrawer,#btnExit,#vocInstagramHeader{display:none!important}
+#btnTheme{width:36px;height:36px;min-width:36px;padding:0!important;border-radius:50%!important;border:1px solid var(--line)!important;background:var(--card)!important;color:var(--tx)!important;display:grid!important;place-items:center!important;cursor:pointer}
+#btnTheme:hover,#btnTheme[aria-expanded="true"]{border-color:var(--amber)!important}
+#btnTheme svg{width:18px;height:18px}
+.voc-theme-menu{position:absolute;top:46px;right:45px;width:192px;z-index:95;padding:7px;border:1px solid var(--line);border-radius:15px;background:var(--hd);box-shadow:0 18px 45px rgba(0,0,0,.22);opacity:0;transform:translateY(-5px);pointer-events:none;visibility:hidden;transition:opacity .15s ease,transform .15s ease,visibility .15s}
+.voc-theme-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible}
+.voc-theme-title{padding:7px 10px 9px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.voc-theme-option{width:100%;min-height:41px;border:0;border-radius:9px;background:transparent;color:var(--tx);display:flex;align-items:center;gap:11px;padding:7px 10px;cursor:pointer;text-align:left;font-size:12px;font-weight:600}
+.voc-theme-option:hover,.voc-theme-option[aria-pressed="true"]{background:var(--card2)}
+.voc-theme-option[aria-pressed="true"]::after{content:'✓';font-size:13px;color:var(--tx);margin-left:auto}
+.voc-theme-swatch{width:19px;height:19px;flex:none;border-radius:50%;border:1px solid rgba(100,100,100,.22)}
+.voc-theme-swatch.dark{background:#17191B}
+.voc-theme-swatch.light{background:#F6F6F3}
+.voc-theme-swatch.pink{background:#E6B5C9}
 
 #vocAuthBtn.voc-header-account{min-width:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;display:inline-flex!important;align-items:center!important;gap:6px!important}
 #vocAuthBtn.voc-header-account .voc-auth-label-text{display:none!important}
@@ -64,6 +77,8 @@ main{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 64px + en
   header{padding:10px 12px!important}
   .hwrap>h1{font-size:23px!important}
   #vocAuthBtn.voc-header-account>svg{padding:7px}
+  #btnTheme{width:34px;height:34px;min-width:34px}
+  .voc-theme-menu{top:43px;right:43px}
   .voc-more-btn{width:34px;height:34px}
   .voc-more-menu{top:43px;right:-2px;width:210px}
   .voc-bottom-nav{width:calc(100% - 16px);grid-template-columns:1fr 1fr 66px 1fr 1fr;padding:6px 7px;border-radius:20px}

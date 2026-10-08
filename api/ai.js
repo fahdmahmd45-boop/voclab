@@ -132,19 +132,8 @@ async function authenticateAndConsumeQuota(req, creditCost) {
     'Content-Type': 'application/json'
   };
 
-  let userResponse;
-  try {
-    userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: commonHeaders });
-  } catch {
-    return { ok: false, status: 503, error: 'Account verification is temporarily unavailable.', code: 'AUTH_UNAVAILABLE' };
-  }
-  if (!userResponse.ok) {
-    return { ok: false, status: 401, error: 'Your sign-in session is invalid or expired. Please sign in again.', code: 'AUTH_INVALID' };
-  }
-  const user = await userResponse.json().catch(() => null);
-  if (!user || !user.id) {
-    return { ok: false, status: 401, error: 'Your sign-in session is invalid or expired. Please sign in again.', code: 'AUTH_INVALID' };
-  }
+  // The quota Edge Function already verifies the JWT using Supabase Auth before
+  // charging credits. Avoid a second, sequential /auth/v1/user round trip here.
 
   let quotaResponse;
   try {
@@ -157,6 +146,9 @@ async function authenticateAndConsumeQuota(req, creditCost) {
     return { ok: false, status: 503, error: 'AI usage protection is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' };
   }
   if (!quotaResponse.ok) {
+    if (quotaResponse.status === 401 || quotaResponse.status === 403) {
+      return { ok: false, status: 401, error: 'Your sign-in session is invalid or expired. Please sign in again.', code: 'AUTH_INVALID' };
+    }
     console.error('Quota RPC failed', quotaResponse.status, await quotaResponse.text().catch(() => ''));
     return { ok: false, status: 503, error: 'AI usage protection is temporarily unavailable.', code: 'QUOTA_UNAVAILABLE' };
   }
@@ -196,7 +188,6 @@ async function authenticateAndConsumeQuota(req, creditCost) {
 
   return {
     ok: true,
-    userId: user.id,
     remaining,
     monthlyLimit,
     plan: accountPlan,
@@ -301,9 +292,9 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5.6-luna',
-        reasoning: { effort: 'low' },
+        reasoning: { effort: 'none' },
         store: false,
-        max_output_tokens: mode === 'file' ? FILE_MAX_OUTPUT_TOKENS : 1200,
+        max_output_tokens: mode === 'file' ? FILE_MAX_OUTPUT_TOKENS : 850,
         input: [{ role: 'user', content }],
         text: {
           format: {

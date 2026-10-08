@@ -787,6 +787,11 @@ document.addEventListener('touchend',e=>{
 
 
 /* ---------- AI search ---------- */
+// Instant, bounded in-page cache. Only successful results are stored, and
+// navigating away from the page clears them. Cached repeats do not call the API
+// and therefore never consume additional credits.
+const aiSearchSessionCache=new Map();
+let aiSearchPending=false;
 function renderDict(){
   const el=document.getElementById('p-dict');
   if(el.dataset.ready)return;el.dataset.ready='1';
@@ -806,16 +811,23 @@ function renderDict(){
 async function aiSearchLookup(){
   const inp=document.getElementById('dIn'),q=(inp&&inp.value||'').trim();
   const out=document.getElementById('dOut'),btn=document.getElementById('aiSearchBtn');
-  if(!q)return;
-  if(btn){btn.disabled=true;btn.textContent='Searching…'}
-  out.innerHTML='<div class="empty">Thinking…</div>';
+  if(!q||aiSearchPending)return;
+  aiSearchPending=true;
+  const cacheKey=q.toLowerCase().replace(/\s+/g,' ');
+  const cached=aiSearchSessionCache.get(cacheKey);
+  if(btn){btn.disabled=true;btn.textContent=cached?'Search':'Searching…'}
+  if(!cached)out.innerHTML='<div class="empty">Thinking…</div>';
   try{
-    const d=await aiPost({mode:'word',word:q,dialects:true});
+    const d=cached?{words:[cached]}:await aiPost({mode:'word',word:q,dialects:true});
     const x=d&&d.words&&d.words[0];
     if(!x)throw {error:'No result returned.'};
+    if(!cached){
+      if(aiSearchSessionCache.size>=60)aiSearchSessionCache.delete(aiSearchSessionCache.keys().next().value);
+      aiSearchSessionCache.set(cacheKey,x);
+    }
     window._aiSearchAdd=x;
     const word=String(x.word||q),ex=String(x.example||'');
-    out.innerHTML=`<div class="dcard" style="margin-top:14px">
+    out.innerHTML=`${cached?'<div style="font-size:11px;color:var(--mut);margin:4px 0 7px">Instant result · no additional AI credit</div>':''}<div class="dcard" style="margin-top:14px">
       <div class="dhead" style="align-items:flex-start;gap:14px;flex-wrap:wrap">
         <div style="min-width:0;flex:1">
           <div class="dword">${aiSafe(word)}</div>
@@ -843,7 +855,7 @@ async function aiSearchLookup(){
       </div>
     </div>`;
   }catch(e){out.innerHTML=`<div class="empty">${aiSafe(aiErrorMessage(e))}</div>`}
-  finally{if(btn){btn.disabled=false;btn.textContent='Search'}}
+  finally{aiSearchPending=false;if(btn){btn.disabled=false;btn.textContent='Search'}}
 }
 function aiSearchAdd(btn){
   const x=window._aiSearchAdd;if(!x)return;

@@ -51,7 +51,7 @@ main{padding-bottom:calc(var(--voc-bottom-h) + var(--voc-bottom-gap) + 64px + en
 .home>#streakBox{background:var(--card)!important;border-color:var(--line)!important;box-shadow:var(--shadow)!important}
 .home>#streakBox>span{filter:none}
 /* Mastered progress is the single accent-positive card. */
-.home>.hprog{background:linear-gradient(145deg,color-mix(in srgb,var(--amber) 10%,var(--card)),var(--card))!important;border-color:color-mix(in srgb,var(--amber) 44%,var(--line))!important;box-shadow:0 10px 32px color-mix(in srgb,var(--amber) 8%,transparent)!important}
+.home>.hprog{background:var(--card)!important;border-color:color-mix(in srgb,var(--amber) 44%,var(--line))!important;box-shadow:none!important}
 .home>.hprog .pbar{background:color-mix(in srgb,var(--amber) 12%,var(--card2))!important}
 .home>.hprog .pbar i{background:var(--amber)!important}
 .hcard .hcount{margin-top:13px!important}

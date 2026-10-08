@@ -135,14 +135,14 @@
       .voc-footer-mark{
         width:27px;
         height:27px;
-        border:1px solid color-mix(in srgb,var(--amber) 55%,var(--line));
+        border:1px solid var(--line);
         border-radius:9px;
         display:grid;
         place-items:center;
         font-family:var(--en);
         font-size:17px;
         font-weight:600;
-        color:var(--amber);
+        color:var(--tx);
         background:var(--card);
       }
       .voc-footer-brand{font-family:var(--en);font-size:16px;font-weight:600;color:var(--tx)}

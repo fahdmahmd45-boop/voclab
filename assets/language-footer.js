@@ -184,7 +184,7 @@
       document.body.appendChild(footer);
     }
 
-    footer.innerHTML = '<div class="voc-footer-inner"><div class="voc-footer-mark" aria-hidden="true">V</div><div class="voc-footer-brand">voclab</div><div class="voc-footer-copy">© 2026 voclab. All rights reserved.</div></div>';
+    footer.innerHTML = '<div class="voc-footer-inner"><div class="voc-footer-mark" aria-hidden="true">V</div><div class="voc-footer-brand">voclab</div><div class="voc-footer-copy">© 2026 voclab · All rights reserved.</div></div>';
   }
 
   function start(){

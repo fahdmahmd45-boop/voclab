@@ -110,7 +110,7 @@ function streakLive(){
 function streakHTML(){
   const c=streakLive();
   const doneToday=streak.last===todayStr();
-  return `<div id="streakBox" style="display:flex;align-items:center;gap:10px;margin:14px 0;padding:12px 16px;border:1px solid ${doneToday?'#D0AF7A':'rgba(128,128,128,.25)'};border-radius:14px">
+  return `<div id="streakBox" style="display:flex;align-items:center;gap:10px;margin:14px 0;padding:12px 16px;border:1px solid ${doneToday?'var(--amber)':'rgba(128,128,128,.25)'};border-radius:14px">
     <span style="font-size:26px">${c>0?'\ud83d\udd25':'\ud83d\udca4'}</span>
     <div style="line-height:1.3">
       <div style="font-weight:700">${c>0?c+'-day streak':'No streak yet'}</div>

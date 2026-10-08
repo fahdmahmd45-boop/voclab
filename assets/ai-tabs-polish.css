@@ -51,7 +51,7 @@
   line-height:1;
   font-weight:700;
   letter-spacing:.16em;
-  color:var(--amber);
+  color:var(--mut);
 }
 #p-dict .dwrap>div:first-child>div:last-child{
   color:var(--mut)!important;
@@ -94,7 +94,7 @@
   padding:24px!important;
   border:1px solid var(--line)!important;
   border-radius:20px!important;
-  background:linear-gradient(145deg,color-mix(in srgb,var(--card) 98%,var(--amber) 2%),var(--card))!important;
+  background:var(--card)!important;
   box-shadow:0 18px 55px rgba(0,0,0,.12)!important;
 }
 body.light #p-dict .dcard{box-shadow:0 16px 44px rgba(35,28,12,.07)!important}

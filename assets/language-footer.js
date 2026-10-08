@@ -21,7 +21,7 @@
     if (!document.querySelector('meta[name="theme-color"]')) {
       const theme = document.createElement('meta');
       theme.name = 'theme-color';
-      theme.content = '#0D0E11';
+      theme.content = '#101310';
       document.head.appendChild(theme);
     }
   }
@@ -184,7 +184,7 @@
       document.body.appendChild(footer);
     }
 
-    footer.innerHTML = '<div class="voc-footer-inner"><div class="voc-footer-mark" aria-hidden="true">V</div><div class="voc-footer-brand">voclab</div><div class="voc-footer-copy">© 2026 voclab. All rights reserved.</div></div>';
+    footer.innerHTML = '<div class="voc-footer-inner"><div class="voc-footer-mark" aria-hidden="true">V</div><div class="voc-footer-brand">voclab</div><div class="voc-footer-copy">© 2026 voclab · All rights reserved.</div></div>';
   }
 
   function start(){

@@ -110,7 +110,7 @@ function streakLive(){
 function streakHTML(){
   const c=streakLive();
   const doneToday=streak.last===todayStr();
-  return `<div id="streakBox" style="display:flex;align-items:center;gap:10px;margin:14px 0;padding:12px 16px;border:1px solid ${doneToday?'#D0AF7A':'rgba(128,128,128,.25)'};border-radius:14px">
+  return `<div id="streakBox" style="display:flex;align-items:center;gap:10px;margin:14px 0;padding:12px 16px;border:1px solid ${doneToday?'var(--amber)':'rgba(128,128,128,.25)'};border-radius:14px">
     <span style="font-size:26px">${c>0?'\ud83d\udd25':'\ud83d\udca4'}</span>
     <div style="line-height:1.3">
       <div style="font-weight:700">${c>0?c+'-day streak':'No streak yet'}</div>
@@ -347,7 +347,7 @@ function wordRowHTML(w,i,base){
       <span class="idx" style="opacity:.5;font-size:12px;min-width:26px">#${num>0?num:i+1}</span>
       <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button>
       <span class="w">${htmlText(w[1])}</span>
-      ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
+      ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
       <span class="t">${htmlText(TY[w[2]]||w[2])}</span>
       <span class="m">${htmlText(w[3])}</span>
       <span class="u">${htmlText(unitLabel(w[0]))}</span>
@@ -641,7 +641,7 @@ function renderMy(){
         <button class="spk" onclick="speak('${esc(w[1])}')" title="Pronounce word">${SPK}</button>
         <span class="w">${htmlText(w[1])}</span>
         ${w[5]?`<span class="t" style="font-family:var(--en);font-weight:400">${aiSafe(w[5])}</span>`:''}
-        ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber,#D0AF7A);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
+        ${w[0]!=='MY'?`<span class="t" style="border:1px solid var(--amber);border-radius:8px;padding:1px 7px">${htmlText(deckName(w[0]))}</span>`:''}
         <span class="t">${htmlText(TY[w[2]]||w[2])}</span>
         <span class="m">${htmlText(w[3])}</span>
         <button class="kbtn" style="margin-left:auto" onclick="toggleKnownMy('${esc(id)}')">${isK?'✓ Mastered':'Mark'}</button>
@@ -967,7 +967,7 @@ function askName(change){
   if(document.getElementById('nameov'))return;
   const ov=document.createElement('div');ov.className='nameov';ov.id='nameov';
   ov.innerHTML=`<div class="namecard">
-    <div class="nbrand">voclab<span class="tld">.</span></div>
+    <div class="nbrand">voclab</div>
     <h2>${change?'Change your name':'Welcome'}</h2>
     <p>${change?'Update the name we greet you with.':'What should we call you?'}</p>
     <input class="search" id="nameIn" maxlength="20" placeholder="Your name" value="${userName}">

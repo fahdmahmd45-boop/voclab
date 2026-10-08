@@ -7,15 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0D0E11; --hd:#101216; --card:#15171C; --card2:#1B1E24; --line:#262A32;
-  --tx:#E9E9E5; --mut:#8E929B; --amber:#D3A45A; --onacc:#171310;
+  --bg:#101310; --hd:#101310; --card:#171C18; --card2:#1E2520; --line:#333C33;
+  --tx:#E8E9E1; --mut:#A1A89F; --amber:#78876B; --onacc:#101310;
   --ok:#4EB388; --bad:#E0604E; --blue:#5CA8D8;
   --en:'Newsreader',Georgia,serif; --ui:'Inter',-apple-system,'Segoe UI',sans-serif; --ar:'IBM Plex Sans Arabic',sans-serif;
   --r:14px; --shadow:none;
 }
 body.light{
-  --bg:#F5F3EE; --hd:#FCFBF7; --card:#FFFFFF; --card2:#F0EDE5; --line:#E4E0D5;
-  --tx:#1E1F23; --mut:#72757C; --amber:#9C7228; --onacc:#FFFFFF;
+  --bg:#F5F5EF; --hd:#FAFBF6; --card:#FFFFFF; --card2:#EAEDE5; --line:#DCE1D7;
+  --tx:#202820; --mut:#63705F; --amber:#54654B; --onacc:#FFFFFF;
   --ok:#2F8F63; --bad:#C24936; --blue:#3D7FAD;
   --shadow:0 1px 2px rgba(30,25,10,.05),0 4px 14px rgba(30,25,10,.05);
 }
@@ -274,7 +274,7 @@ body,header,.row,.fcard,.qword,.tprompt,.opt,.tab,select,.search,.tin,.myin,.dra
 button,.rchip,.kbtn,.delbtn,.spk,.iconbtn,.addbtn,.next,.opt,.tab{transition:transform .12s ease,filter .12s ease}
 button:active,.rchip:active,.kbtn:active,.opt:active,.tab:active{transform:scale(.93);filter:brightness(1.15)}
 .addbtn:active,.next:active{transform:scale(.97)}
-.click-pulse{position:fixed;width:16px;height:16px;border-radius:50%;background:var(--amber,#D0AF7A);pointer-events:none;z-index:9999;opacity:.5;transform:translate(-50%,-50%) scale(1);animation:pulseOut .5s ease-out forwards}
+.click-pulse{position:fixed;width:16px;height:16px;border-radius:50%;background:var(--amber);pointer-events:none;z-index:9999;opacity:.5;transform:translate(-50%,-50%) scale(1);animation:pulseOut .5s ease-out forwards}
 @keyframes pulseOut{to{transform:translate(-50%,-50%) scale(4.5);opacity:0}}
 .row,.dcard,.myform{animation:fadeUp .35s ease both}
 
@@ -314,7 +314,7 @@ html,body{max-width:100%;overflow-x:hidden}
 <body>
 <header>
   <div class="hwrap">
-    <h1>voclab<span class="tld">.</span><small>English vocabulary trainer</small></h1>
+    <h1>voclab<small>English vocabulary trainer</small></h1>
     <div class="hbtns"><button class="iconbtn" id="btnExit" title="Exit to level selection" aria-label="Exit to level selection" style="display:none"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="exit-label">Exit</span></button><button class="iconbtn" id="btnDrawer" title="Filters"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg><span>Filters</span></button><button class="iconbtn" id="btnTheme" title="Theme"></button></div>
     <div class="prog"><b id="pKnown">0</b> / <span id="pTotal" style="display:inline">0</span><span>words mastered</span>
       <div class="pbar"><i id="pFill"></i></div>

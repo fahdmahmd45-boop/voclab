@@ -97,7 +97,7 @@
   background:var(--card)!important;
   box-shadow:0 18px 55px rgba(0,0,0,.12)!important;
 }
-body.light #p-dict .dcard{box-shadow:0 16px 44px rgba(35,28,12,.07)!important}
+body.light #p-dict .dcard,body.pink #p-dict .dcard{box-shadow:0 16px 44px rgba(35,28,12,.07)!important}
 #p-dict .dword{
   font-size:clamp(34px,4vw,44px)!important;
   line-height:1!important;

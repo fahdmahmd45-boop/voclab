@@ -21,7 +21,7 @@
     if (!document.querySelector('meta[name="theme-color"]')) {
       const theme = document.createElement('meta');
       theme.name = 'theme-color';
-      theme.content = '#0D0E11';
+      theme.content = '#101310';
       document.head.appendChild(theme);
     }
   }

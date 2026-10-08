@@ -80,11 +80,11 @@
     card.dataset.vocSubscriptionReady = '1';
 
     const price = card.querySelector('.voc-auth-price');
-    if (price) price.textContent = '15 SAR / month';
+    if (price) price.textContent = '35 SAR · lifetime';
 
     const description = card.querySelector('p');
     if (description) {
-      description.textContent = '300 AI credits each month. Annual plan: 100 SAR. To activate Pro, contact us on Instagram and send your VocLab account email.';
+      description.textContent = 'One-time payment. 300 AI credits renew each month for the lifetime of VocLab while the service operates. To activate Pro, contact us on Instagram and send your VocLab account email.';
     }
 
     const oldButton = card.querySelector('.voc-auth-primary');

@@ -266,7 +266,10 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  const quotaStartedAt = Date.now();
   const quota = await authenticateAndConsumeQuota(req, creditCost);
+  const quotaDurationMs = Date.now() - quotaStartedAt;
+  res.setHeader('Server-Timing', `quota;dur=${quotaDurationMs}`);
   if (quota.monthlyLimit != null) {
     res.setHeader('X-RateLimit-Limit', String(quota.monthlyLimit));
     res.setHeader('X-AI-Credit-Limit', String(quota.monthlyLimit));
@@ -284,6 +287,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const modelStartedAt = Date.now();
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
@@ -291,10 +295,10 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-5.6-luna',
-        reasoning: { effort: 'none' },
+        // One-word dictionary lookups are better served by a low-latency, non-reasoning model.
+        model: 'gpt-4.1-mini',
         store: false,
-        max_output_tokens: mode === 'file' ? FILE_MAX_OUTPUT_TOKENS : 850,
+        max_output_tokens: 650,
         input: [{ role: 'user', content }],
         text: {
           format: {
@@ -307,6 +311,7 @@ module.exports = async function handler(req, res) {
       })
     });
 
+    res.setHeader('Server-Timing', `quota;dur=${quotaDurationMs}, model;dur=${Date.now() - modelStartedAt}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       console.error('OpenAI error', response.status, data?.error?.message || data);

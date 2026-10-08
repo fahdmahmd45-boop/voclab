@@ -792,6 +792,28 @@ document.addEventListener('touchend',e=>{
 // and therefore never consume additional credits.
 const aiSearchSessionCache=new Map();
 let aiSearchPending=false;
+// Oxford entries already ship in the page. Show verified local meaning and
+// example immediately; only definitions/IPA need to wait for the AI request.
+function aiSearchInstantPreview(query){
+  const key=query.toLowerCase().replace(/\s+/g,' ').trim();
+  const row=OXR.find(r=>String(r[1]||'').toLowerCase()===key);
+  if(!row)return '';
+  const word=String(row[1]),arabic=String(row[3]||'');
+  const example=String(OXEX[row[0]+'|'+word]||'');
+  return `<div class="dcard" style="margin-top:14px">
+    <div style="font-size:11px;color:var(--mut);margin-bottom:12px">From your vocabulary library · instant preview</div>
+    <div class="dhead" style="gap:12px;flex-wrap:wrap">
+      <div class="dword">${aiSafe(word)}</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="iconbtn" onclick="speak('${esc(word)}','en-US')" title="American pronunciation">${SPK}<span>US</span></button>
+        <button class="iconbtn" onclick="speak('${esc(word)}','en-GB')" title="British pronunciation">${SPK}<span>UK</span></button>
+      </div>
+    </div>
+    ${arabic?`<div class="dar">${aiSafe(arabic)}</div>`:''}
+    ${example?`<div class="dpos"><div class="dposname">example</div><div class="dex" style="font-size:16px">"${aiSafe(example)}"</div></div>`:''}
+    <div style="font-size:12px;color:var(--mut);margin-top:16px" role="status">Loading English definition, IPA and full details…</div>
+  </div>`;
+}
 function renderDict(){
   const el=document.getElementById('p-dict');
   if(el.dataset.ready)return;el.dataset.ready='1';
@@ -816,7 +838,8 @@ async function aiSearchLookup(){
   const cacheKey=q.toLowerCase().replace(/\s+/g,' ');
   const cached=aiSearchSessionCache.get(cacheKey);
   if(btn){btn.disabled=true;btn.textContent=cached?'Search':'Searching…'}
-  if(!cached)out.innerHTML='<div class="empty">Thinking…</div>';
+  const instantPreview=cached?'':aiSearchInstantPreview(q);
+  if(!cached)out.innerHTML=instantPreview||'<div class="empty">Looking up your word…</div>';
   try{
     const d=cached?{words:[cached]}:await aiPost({mode:'word',word:q,dialects:true});
     const x=d&&d.words&&d.words[0];
@@ -854,7 +877,7 @@ async function aiSearchLookup(){
         <button class="next" id="aiSearchAddBtn" style="width:auto;margin:0;white-space:nowrap" onclick="aiSearchAdd(this)">Add to deck</button>
       </div>
     </div>`;
-  }catch(e){out.innerHTML=`<div class="empty">${aiSafe(aiErrorMessage(e))}</div>`}
+  }catch(e){out.innerHTML=`${instantPreview}<div class="empty">${aiSafe(aiErrorMessage(e))}</div>`}
   finally{aiSearchPending=false;if(btn){btn.disabled=false;btn.textContent='Search'}}
 }
 function aiSearchAdd(btn){

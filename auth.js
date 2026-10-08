@@ -29,7 +29,7 @@
     style.id = 'vocAuthStyles';
     style.textContent = `
       .voc-auth-btn{min-width:76px;justify-content:center}
-      .voc-auth-badge{font-size:9px;letter-spacing:.09em;text-transform:uppercase;border:1px solid color-mix(in srgb,var(--amber) 45%,var(--line));color:var(--amber);padding:2px 5px;border-radius:999px;font-weight:700}
+      .voc-auth-badge{font-size:9px;letter-spacing:.09em;text-transform:uppercase;border:1px solid var(--line);color:var(--tx);padding:2px 5px;border-radius:999px;font-weight:700}
       .voc-auth-overlay{position:fixed;inset:0;z-index:120;background:rgba(5,6,8,.64);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
       .voc-auth-overlay.open{opacity:1;pointer-events:auto}
       .voc-auth-card{width:min(430px,100%);background:var(--hd);border:1px solid var(--line);border-radius:22px;box-shadow:0 26px 70px rgba(0,0,0,.28);padding:24px;transform:translateY(8px) scale(.985);transition:transform .2s ease}

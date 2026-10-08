@@ -106,11 +106,6 @@
     return `<button type="button" class="voc-more-item" ${extra}>${icon}<span>${label}</span>${value ? `<span class="value">${value}</span>` : ''}</button>`;
   }
 
-  function updateThemeValue() {
-    const value = document.querySelector('#vocMoreTheme .value');
-    if (value) value.textContent = document.body.classList.contains('light') ? 'Light' : 'Dark';
-  }
-
   function createMoreMenu() {
     const buttons = document.querySelector('.hbtns');
     if (!buttons || document.getElementById('vocMoreBtn')) return;
@@ -132,14 +127,12 @@
       ${moreItem(ICONS.filter, 'Filters', '')}
       ${moreItem(ICONS.instagram, 'Instagram', '@voclab_sa')}
       <div class="voc-more-sep"></div>
-      ${moreItem(ICONS.theme, 'Theme', document.body.classList.contains('light') ? 'Light' : 'Dark')}
       ${moreItem(ICONS.language, 'Language', 'English', 'aria-disabled="true" title="English is the only active interface language in the current build"')}`;
 
     const items = menu.querySelectorAll('.voc-more-item');
     items[0].id = 'vocMoreFilters';
     items[1].id = 'vocMoreInstagram';
-    items[2].id = 'vocMoreTheme';
-    items[3].id = 'vocMoreLanguage';
+    items[2].id = 'vocMoreLanguage';
 
     function close() {
       menu.classList.remove('open');
@@ -151,7 +144,8 @@
       const open = !menu.classList.contains('open');
       menu.classList.toggle('open', open);
       more.setAttribute('aria-expanded', open ? 'true' : 'false');
-      updateThemeValue();
+      document.getElementById('vocThemeMenu')?.classList.remove('open');
+      document.getElementById('btnTheme')?.setAttribute('aria-expanded', 'false');
     });
 
     items[0].addEventListener('click', () => {
@@ -162,12 +156,7 @@
       close();
       window.open(INSTAGRAM_URL, '_blank', 'noopener,noreferrer');
     });
-    items[2].addEventListener('click', () => {
-      document.getElementById('btnTheme')?.click();
-      updateThemeValue();
-      close();
-    });
-    items[3].addEventListener('click', (event) => event.preventDefault());
+    items[2].addEventListener('click', (event) => event.preventDefault());
 
     document.addEventListener('click', (event) => {
       if (!menu.contains(event.target) && event.target !== more) close();
@@ -178,6 +167,70 @@
 
     buttons.appendChild(more);
     buttons.appendChild(menu);
+  }
+
+  function createThemePicker() {
+    const buttons = document.querySelector('.hbtns');
+    const btn = document.getElementById('btnTheme');
+    if (!buttons || !btn || document.getElementById('vocThemeMenu')) return;
+
+    btn.type = 'button';
+    btn.title = 'Choose color theme';
+    btn.setAttribute('aria-label', 'Choose color theme');
+    btn.setAttribute('aria-haspopup', 'true');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'vocThemeMenu');
+
+    const menu = document.createElement('div');
+    menu.id = 'vocThemeMenu';
+    menu.className = 'voc-theme-menu';
+    menu.setAttribute('role', 'group');
+    menu.setAttribute('aria-label', 'Color themes');
+    menu.innerHTML = `
+      <div class="voc-theme-title">Appearance</div>
+      <button type="button" class="voc-theme-option" data-theme="dark"><span class="voc-theme-swatch dark"></span>Dark</button>
+      <button type="button" class="voc-theme-option" data-theme="light"><span class="voc-theme-swatch light"></span>Light</button>
+      <button type="button" class="voc-theme-option" data-theme="pink"><span class="voc-theme-swatch pink"></span>Soft Pink</button>`;
+
+    function close() {
+      menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function sync() {
+      const selected = window.voclabGetTheme?.() || (document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('light') ? 'light' : 'dark');
+      menu.querySelectorAll('[data-theme]').forEach((option) => {
+        option.setAttribute('aria-pressed', String(option.dataset.theme === selected));
+      });
+    }
+
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      const open = !menu.classList.contains('open');
+      document.getElementById('vocMoreMenu')?.classList.remove('open');
+      document.getElementById('vocMoreBtn')?.setAttribute('aria-expanded', 'false');
+      menu.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      sync();
+    };
+
+    menu.addEventListener('click', (event) => {
+      const option = event.target.closest('[data-theme]');
+      if (!option) return;
+      window.voclabSetTheme?.(option.dataset.theme);
+      sync();
+      close();
+    });
+    window.addEventListener('voclab:themechange', sync);
+    document.addEventListener('click', (event) => {
+      if (!menu.contains(event.target) && event.target !== btn && !btn.contains(event.target)) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+
+    buttons.appendChild(menu);
+    sync();
   }
 
   function normalizeAccountButton() {
@@ -197,9 +250,11 @@
     if (!buttons) return;
     normalizeAccountButton();
     createMoreMenu();
+    createThemePicker();
     const observer = new MutationObserver(() => {
       normalizeAccountButton();
       createMoreMenu();
+      createThemePicker();
     });
     observer.observe(buttons, { childList: true, subtree: true });
   }

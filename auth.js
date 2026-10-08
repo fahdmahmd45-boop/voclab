@@ -66,7 +66,7 @@
       .voc-auth-row small{display:block;color:var(--mut);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
       .voc-auth-row strong{font-size:13.5px;font-weight:600}
       .voc-auth-plan{display:inline-flex;align-items:center;gap:6px;color:var(--amber);font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
-      .voc-auth-pro-card{margin-top:14px;padding:17px;border:1px solid color-mix(in srgb,var(--amber) 38%,var(--line));border-radius:14px;background:linear-gradient(145deg,color-mix(in srgb,var(--amber) 8%,var(--card)),var(--card))}
+      .voc-auth-pro-card{margin-top:14px;padding:17px;border:1px solid color-mix(in srgb,var(--amber) 38%,var(--line));border-radius:14px;background:var(--card)}
       .voc-auth-pro-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
       .voc-auth-pro-top strong{font-family:var(--en);font-size:21px}
       .voc-auth-price{font-size:13px;color:var(--amber);font-weight:700;white-space:nowrap}
@@ -102,7 +102,7 @@
       overlay.id = 'vocAuthOverlay';
       overlay.className = 'voc-auth-overlay';
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.innerHTML = `<div class="voc-auth-card" role="dialog" aria-modal="true" aria-labelledby="vocAuthDialogTitle"><div class="voc-auth-head"><div><div class="voc-auth-brand">voclab<span>.</span></div><div class="voc-auth-kicker">Your learning account</div></div><button class="voc-auth-close" id="vocAuthClose" type="button" aria-label="Close">${iconClose}</button></div><div id="vocAuthBody"></div></div>`;
+      overlay.innerHTML = `<div class="voc-auth-card" role="dialog" aria-modal="true" aria-labelledby="vocAuthDialogTitle"><div class="voc-auth-head"><div><div class="voc-auth-brand">voclab</div><div class="voc-auth-kicker">Your learning account</div></div><button class="voc-auth-close" id="vocAuthClose" type="button" aria-label="Close">${iconClose}</button></div><div id="vocAuthBody"></div></div>`;
       overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
       document.body.appendChild(overlay);
       overlay.querySelector('#vocAuthClose').addEventListener('click', closeModal);

@@ -746,10 +746,26 @@ fSearch.oninput=()=>{picked=true;listVisible=0;if(curTab==='list')renderList(tru
 
 /* ---------- theme ---------- */
 const btnTheme=document.getElementById('btnTheme');
-function applyTheme(t){document.body.classList.toggle('light',t==='light');btnTheme.innerHTML=t==='light'?MOON:SUN}
+const THEME_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1.4-3.4 1.9 1.9 0 0 1 1.4-3.2H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>';
+function applyTheme(t){
+  document.body.classList.toggle('light',t==='light');
+  document.body.classList.toggle('pink',t==='pink');
+  btnTheme.innerHTML=THEME_ICON;
+  const color=document.querySelector('meta[name="theme-color"]');
+  if(color)color.content=t==='pink'?'#FFF8FA':t==='light'?'#FAFAF8':'#121415';
+}
 let theme=store.get('engl01_theme')||'dark';
+if(!['dark','light','pink'].includes(theme))theme='dark';
 applyTheme(theme);
-btnTheme.onclick=()=>{theme=theme==='dark'?'light':'dark';store.set('engl01_theme',theme);applyTheme(theme)};
+window.voclabGetTheme=()=>theme;
+window.voclabSetTheme=(next)=>{
+  if(!['dark','light','pink'].includes(next))return;
+  theme=next;
+  store.set('engl01_theme',theme);
+  applyTheme(theme);
+  window.dispatchEvent(new CustomEvent('voclab:themechange',{detail:{theme}}));
+};
+btnTheme.onclick=()=>window.voclabSetTheme(theme==='dark'?'light':theme==='light'?'pink':'dark');
 
 /* ---------- filter drawer (swipe from left edge to open, swipe left to close) ---------- */
 const drawer=document.getElementById('drawer'),overlay=document.getElementById('overlay');

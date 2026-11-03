@@ -828,7 +828,7 @@ function applyTheme(t){
   const color=document.querySelector('meta[name="theme-color"]');
   if(color)color.content=t==='pink'?'#FFF8FA':t==='light'?'#FAFAF8':'#121415';
 }
-let theme=store.get('engl01_theme')||'dark';
+let theme=store.get('engl01_theme')||'light';
 if(!['dark','light','pink'].includes(theme))theme='dark';
 applyTheme(theme);
 window.voclabGetTheme=()=>theme;

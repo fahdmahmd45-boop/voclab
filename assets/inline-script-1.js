@@ -467,22 +467,93 @@ function fcRate(level){
 
 /* ---------- Quiz (MCQ) ---------- */
 let qDeck=[],qI=0,qScore=0,qLock=false;
-function startMcq(){if(!picked&&fSrc.value==='all'){document.getElementById('p-mcq').innerHTML=guardHTML();return}qDeck=shuffle(pool());qI=0;qScore=0;renderMcq()}
+let quizLanguage=store.get('voclab_quiz_language')==='english'?'english':'arabic';
+function quizControls(){
+  return `<div class="voc-quiz-options" role="group" aria-label="Quiz language">
+      <span class="voc-quiz-label">Answers in</span>
+      <button type="button" class="voc-quiz-choice${quizLanguage==='arabic'?' active':''}" aria-pressed="${quizLanguage==='arabic'}" onclick="setQuizLanguage('arabic')">Arabic meaning</button>
+      <button type="button" class="voc-quiz-choice${quizLanguage==='english'?' active':''}" aria-pressed="${quizLanguage==='english'}" onclick="setQuizLanguage('english')">English</button>
+    </div>`;
+}
+function setQuizLanguage(value){
+  if(value!=='arabic'&&value!=='english')return;
+  if(quizLanguage===value)return;
+  quizLanguage=value;
+  store.set('voclab_quiz_language',value);
+  startMcq();
+}
+function quizCloze(w){
+  const word=String(w?.[1]||'').replace(/^\(in\)\s*/i,'').trim();
+  const example=String(w?.[4]||'').trim();
+  if(!word||!example)return '';
+  const escaped=word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  if(!new RegExp('\\b'+escaped+'\\b','i').test(example))return '';
+  return blankWord(example,word);
+}
+function quizUniqueOptions(values,key){
+  const seen=new Set(),out=[];
+  for(const w of values){
+    const value=String(key(w)||'').trim().toLowerCase();
+    if(!value||seen.has(value))continue;
+    seen.add(value);
+    out.push(w);
+  }
+  return out;
+}
+function startMcq(){
+  if(!picked&&fSrc.value==='all'){document.getElementById('p-mcq').innerHTML=guardHTML();return}
+  const all=pool();
+  const eligible=quizLanguage==='english'
+    ? all.filter(w=>String(w?.[6]||'').trim()||quizCloze(w))
+    : all.filter(w=>String(w?.[3]||'').trim());
+  qDeck=shuffle(quizUniqueOptions(eligible,w=>w[1]));
+  qI=0;
+  qScore=0;
+  renderMcq();
+}
 function renderMcq(){
   const el=document.getElementById('p-mcq');
-  if(qDeck.length<4){el.innerHTML=levelStatHTML()+'<div class="empty">Need at least 4 words in this filter.</div>';return}
-  if(qI>=qDeck.length){el.innerHTML=levelStatHTML()+`<div class="done"><div class="big">${DONE_ICO}</div><p>Score: <b>${qScore}</b> / ${qDeck.length}</p><p class="praise">${praise()}</p><button class="next" style="max-width:250px;margin:16px auto 0;display:block" onclick="startMcq()">Try again</button></div>`;return}
+  const prefix=levelStatHTML()+quizControls();
+  if(qDeck.length<4){
+    el.innerHTML=prefix+'<div class="empty">Choose a deck with at least four usable words. English mode uses definitions where available and English example sentences otherwise.</div>';
+    return;
+  }
+  if(qI>=qDeck.length){
+    el.innerHTML=prefix+`<div class="done"><div class="big">${DONE_ICO}</div><p>Score: <b>${qScore}</b> / ${qDeck.length}</p><p class="praise">${praise()}</p><button class="next" style="max-width:250px;margin:16px auto 0;display:block" onclick="startMcq()">Try again</button></div>`;
+    return;
+  }
   qLock=false;
   const w=qDeck[qI];
-  const wrong=shuffle(qDeck.filter(x=>x[3]!==w[3])).slice(0,3);
-  const opts=shuffle([w,...wrong]);
-  el.innerHTML=levelStatHTML()+`<div class="qwrap">
-    <div class="qword">
+  let question='',options=[];
+  if(quizLanguage==='english'){
+    const definition=String(w[6]||'').trim();
+    const wrongDefs=quizUniqueOptions(shuffle(qDeck.filter(x=>x!==w&&String(x[6]||'').trim()!==definition)),x=>x[6])
+      .filter(x=>String(x[6]||'').trim()).slice(0,3);
+    if(definition&&wrongDefs.length>=3){
+      const choices=shuffle([w,...wrongDefs]);
+      question=`<div class="qword"><div class="word">${htmlText(w[1])} <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button></div><div class="type">Choose the correct English definition</div></div>`;
+      options=choices.map(o=>({text:String(o[6]||''),correct:o===w}));
+    }else{
+      const cloze=quizCloze(w);
+      if(!cloze){qI++;return renderMcq();}
+      const wrongWords=quizUniqueOptions(shuffle(qDeck.filter(x=>x!==w)),x=>x[1]).slice(0,3);
+      if(wrongWords.length<3){qI++;return renderMcq();}
+      question=`<div class="qword"><div class="type">Which word completes this English sentence?</div><div class="qex">${cloze}</div></div>`;
+      options=shuffle([w,...wrongWords]).map(o=>({text:String(o[1]||''),correct:o===w}));
+    }
+  }else{
+    const wrong=quizUniqueOptions(shuffle(qDeck.filter(x=>x!==w&&String(x[3]||'')!==String(w[3]||''))),x=>x[3]).slice(0,3);
+    if(wrong.length<3){qI++;return renderMcq();}
+    question=`<div class="qword">
       <div class="word">${htmlText(w[1])} <button class="spk" onclick="speak('${esc(w[1])}')">${SPK}</button></div>
-      <div class="type">${htmlText(TY[w[2]]||w[2])}</div>
-      ${w[4]?`<div class="qex">${blankWord(w[4],w[1])}</div>`:``}
-    </div>
-    ${opts.map(o=>`<button class="opt" data-r="${o[3]===w[3]?1:0}" onclick="pickOpt(this)">${htmlText(o[3])}</button>`).join('')}
+      <div class="type">${htmlText(TY[w[2]]||w[2])} · Choose the Arabic meaning</div>
+      ${w[4]?`<div class="qex">${blankWord(w[4],w[1])}</div>`:''}
+    </div>`;
+    options=shuffle([w,...wrong]).map(o=>({text:String(o[3]||''),correct:o===w}));
+  }
+  el.innerHTML=prefix+`<div class="qwrap">
+    ${question}
+    ${options.map(o=>`<button class="opt" data-r="${o.correct?1:0}" onclick="pickOpt(this)">${htmlText(o.text)}</button>`).join('')}
     <div class="score">Question ${qI+1} / ${qDeck.length} · Correct: ${qScore}</div>
   </div>`;
 }
@@ -493,6 +564,7 @@ function pickOpt(btn){
   else{sfxWrong();btn.classList.add('wrong');document.querySelectorAll('.opt').forEach(o=>{if(o.dataset.r==='1')o.classList.add('right')})}
   setTimeout(()=>{qI++;renderMcq()},right?700:1500);
 }
+
 
 /* ---------- Spelling (meaning + blanked example -> type the word) ---------- */
 let tDeck=[],tI=0,tScore=0;

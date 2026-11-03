@@ -111,7 +111,10 @@ async function enforceNetworkRateLimit(req) {
   const ip = getClientIp(req);
 
   if (!active) {
-    console.warn('Upstash rate limit is not configured; using per-instance fallback limiter.');
+    if (process.env.VERCEL_ENV === 'production') {
+      console.error('Production network rate limit storage is not configured.');
+      return { ok: false, status: 503, code: 'RATE_LIMIT_UNAVAILABLE', error: 'AI protection is temporarily unavailable.' };
+    }
     return enforceFallbackNetworkRateLimit(ip);
   }
 
@@ -141,6 +144,9 @@ async function enforceNetworkRateLimit(req) {
     return { ok: true, ip };
   } catch (error) {
     console.error('Upstash rate limit error', error?.message || error);
+    if (process.env.VERCEL_ENV === 'production') {
+      return { ok: false, status: 503, code: 'RATE_LIMIT_UNAVAILABLE', error: 'AI protection is temporarily unavailable.' };
+    }
     return enforceFallbackNetworkRateLimit(ip);
   }
 }

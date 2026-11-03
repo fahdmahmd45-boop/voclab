@@ -27,7 +27,19 @@ jobs:
             echo "Gitleaks executable not available"
             exit 1
           fi
-          "$GITLEAKS_BIN" detect --source . --redact --no-banner --exit-code 2
+          "$GITLEAKS_BIN" detect --source . --redact --no-banner --exit-code 0 --report-format json --report-path full-history-gitleaks.json
+          jq -r '.[] | "Detected: file=" + .File + " line=" + (.StartLine|tostring) + " rule=" + .RuleID + " commit=" + .Commit' full-history-gitleaks.json
+          if [ "$(jq 'length' full-history-gitleaks.json)" -gt 0 ]; then
+            echo "Confirmed historical secret patterns. Rotate and inspect before merge."
+            exit 2
+          fi
+      - name: Upload redacted history findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-history-gitleaks
+          path: full-history-gitleaks.json
+          retention-days: 7
   dependencies:
     runs-on: ubuntu-latest
     steps:

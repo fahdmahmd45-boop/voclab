@@ -1,0 +1,190 @@
+/* VOC LAB / Editorial Design System v1
+   Quiet olive + ivory; purposeful hierarchy; restrained surfaces.
+   Presentation only: learning, auth, subscriptions and data remain unchanged. */
+
+:root {
+  --voc-radius-sm:7px;
+  --voc-radius-md:10px;
+  --voc-radius-lg:13px;
+  --voc-content-width:1080px;
+}
+body.light{
+  --bg:#F7F6F0;
+  --hd:#F7F6F0;
+  --card:#FCFBF7;
+  --card2:#F0EFE7;
+  --line:#DCDDD2;
+  --tx:#252D25;
+  --mut:#70766E;
+  --amber:#526749;
+  --onacc:#FFFFFF;
+  --shadow:none;
+}
+body:not(.light):not(.pink){--amber:#9BAA8E}
+body{
+  font-feature-settings:'kern' 1;
+  text-rendering:optimizeLegibility;
+}
+header{
+  background:var(--hd)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border-bottom:1px solid var(--line);
+}
+.hwrap>h1,.voc-auth-brand,.voc-footer-brand{
+  letter-spacing:-.045em!important;
+}
+.hwrap>h1{font-weight:600!important}
+main .home>.eyebrow{
+  font-size:10px;
+  letter-spacing:.14em;
+  font-weight:650;
+  text-transform:uppercase;
+  color:var(--mut);
+}
+main .home>.hgreet{
+  font-family:var(--en)!important;
+  font-weight:500!important;
+  letter-spacing:-.035em!important;
+  line-height:1.08!important;
+}
+.home>.hquote{
+  font-family:var(--ui)!important;
+  font-style:normal!important;
+  font-size:14px!important;
+  line-height:1.55!important;
+  color:var(--mut)!important;
+}
+.home>.hhead{
+  padding-top:8px;
+  border-top:1px solid var(--line);
+  margin-top:22px!important;
+}
+.home>.hhead h3{
+  font-size:11px!important;
+  letter-spacing:.12em!important;
+  font-weight:650!important;
+}
+.home>.hgrid{gap:11px!important}
+.hcard{
+  border-radius:var(--voc-radius-md)!important;
+  border:1px solid var(--line)!important;
+  background:var(--card)!important;
+  box-shadow:none!important;
+  transition:border-color .18s ease,background .18s ease!important;
+}
+.hcard::after{display:none!important}
+.hcard:hover{
+  border-color:var(--amber)!important;
+  background:var(--card)!important;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.ht{
+  font-family:var(--en)!important;
+  font-weight:500!important;
+  letter-spacing:-.02em;
+}
+.hcard .hbar{height:3px!important}
+.home>#streakBox,.home>.hprog{
+  border:1px solid var(--line)!important;
+  border-radius:var(--voc-radius-md)!important;
+  box-shadow:none!important;
+  background:var(--card)!important;
+}
+.voc-home-subnav{
+  background:transparent!important;
+  border:0!important;
+  border-bottom:1px solid var(--line)!important;
+  border-radius:0!important;
+  padding:0!important;
+  gap:18px!important;
+  display:flex!important;
+  margin-bottom:23px!important;
+}
+.voc-home-subnav button{
+  flex:0 1 auto!important;
+  width:auto!important;
+  border-bottom:2px solid transparent!important;
+  border-radius:0!important;
+  padding:11px 2px 12px!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  color:var(--mut)!important;
+  background:transparent!important;
+}
+.voc-home-subnav button.active{
+  border-bottom-color:var(--amber)!important;
+  color:var(--tx)!important;
+  background:transparent!important;
+}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{
+  outline:2px solid var(--amber)!important;
+  outline-offset:3px!important;
+}
+.iconbtn,.kbtn,.delbtn,.next,.addbtn,.fcbtns button,.opt{
+  border-radius:var(--voc-radius-sm)!important;
+  box-shadow:none!important;
+}
+.myform,.fcard,.qword,.tprompt,.dcard,.row,.voc-ai-plan-note,.voc-topup-plans{
+  border-radius:var(--voc-radius-md)!important;
+  box-shadow:none!important;
+}
+.myform,.dcard,.fcard,.qword,.tprompt{border:1px solid var(--line)!important}
+.row{
+  background:var(--card)!important;
+  border-bottom:1px solid var(--line)!important;
+}
+.row:hover{transform:none!important}
+#p-dict .dsearch{
+  border-radius:var(--voc-radius-md)!important;
+  box-shadow:none!important;
+}
+#p-dict .dcard{
+  border-radius:var(--voc-radius-md)!important;
+  box-shadow:none!important;
+}
+#p-dict .dwrap>div:first-child>div:first-child,
+#p-dict .dword{
+  font-family:var(--en)!important;
+  font-weight:500!important;
+}
+.voc-bottom-nav{
+  border-radius:16px!important;
+  box-shadow:0 9px 26px rgba(0,0,0,.13)!important;
+}
+.voc-bottom-item.voc-add-fab{
+  box-shadow:0 5px 14px rgba(0,0,0,.14)!important;
+}
+.voc-auth-card{
+  border-radius:14px!important;
+  box-shadow:0 17px 60px rgba(0,0,0,.20)!important;
+}
+.voc-auth-row,.voc-auth-pro-card{
+  border-radius:var(--voc-radius-md)!important;
+}
+.voc-footer{border-top:1px solid var(--line)}
+@media(min-width:1024px){
+  .home>.hgreet{font-size:clamp(45px,4.2vw,58px)!important}
+  .home>.hquote{margin-bottom:25px!important}
+  .home>.hhead{margin-top:28px!important}
+  .tabs{background:transparent!important;border:0!important;border-bottom:1px solid var(--line)!important;
+    border-radius:0!important;padding:0 0 6px!important;gap:8px!important}
+  .tab{background:transparent!important;border-radius:6px!important;font-weight:600!important}
+  .tab.on{background:var(--card2)!important;color:var(--tx)!important}
+  main{padding-top:30px!important}
+}
+@media(max-width:1023px){
+  .voc-home-subnav{gap:14px!important;overflow-x:auto}
+  .home>.hhead{margin-top:17px!important}
+  .home>.hquote{font-size:13px!important}
+}
+@media(max-width:540px){
+  .home>.hgreet{font-size:36px!important}
+  .hcard{padding:13px!important}
+  .voc-home-subnav button{font-size:11px!important}
+  .voc-bottom-nav{border-radius:15px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .hcard,.tab,.row,.panel,.next{animation:none!important;transition:none!important}
+}

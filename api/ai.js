@@ -295,10 +295,12 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // One-word dictionary lookups are better served by a low-latency, non-reasoning model.
-        model: 'gpt-4.1-mini',
+        // GPT-6 Luna is optimized for short, high-volume vocabulary tasks.
+        // Keep zero reasoning for fast lookup and preserve strict JSON schema.
+        model: 'gpt-6-luna',
+        reasoning: { effort: 'none' },
         store: false,
-        max_output_tokens: 650,
+        max_output_tokens: 750,
         input: [{ role: 'user', content }],
         text: {
           format: {

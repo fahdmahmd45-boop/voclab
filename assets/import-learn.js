@@ -16,6 +16,9 @@
   let lastIntent = 'explain';
   let lastFile = '';
   let savedDeckId = '';
+  let progressTimer = null;
+  let progressStartedAt = 0;
+  let progressValue = 0;
 
   panel.innerHTML =
     '<div class="home" style="max-width:700px">' +
@@ -34,6 +37,11 @@
     '<option value="questions">Only vocabulary targeted by questions</option></select>' +
     '<p style="color:var(--mut);font-size:12px;margin:10px 0 14px">AI analysis costs 5 credits per request. No charge just to choose a file. Results are reviewed before saving or starting a quiz.</p>' +
     '<button class="next" id="vocImportAnalyze" type="button">Analyze vocabulary · 5 credits</button>' +
+    '<div id="vocImportProgress" hidden class="voc-import-progress" role="group" aria-label="File analysis progress">' +
+    '<div class="voc-import-progress-head"><strong id="vocImportProgressPhase">Preparing your file…</strong><span id="vocImportProgressPercent">0%</span></div>' +
+    '<div class="voc-import-progress-track" role="progressbar" aria-label="Estimated preparation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="vocImportProgressBar"><span id="vocImportProgressFill"></span></div>' +
+    '<div class="voc-import-progress-foot"><span id="vocImportProgressTime">00:00 elapsed</span><span id="vocImportProgressHint">Visual estimate · processing time varies</span></div>' +
+    '</div>' +
     '<p id="vocImportStatus" role="status" aria-live="polite" style="font-size:13px;color:var(--mut);margin-top:12px"></p>' +
     '</div><div id="vocImportResults"></div></div>';
   const get = id => document.getElementById(id);
@@ -41,6 +49,62 @@
   const status = get('vocImportStatus');
   const result = get('vocImportResults');
   const analyze = get('vocImportAnalyze');
+  const progress = get('vocImportProgress');
+  const css = document.createElement('style');
+  css.id = 'vocImportProgressStyles';
+  css.textContent = `
+    .voc-import-progress{margin-top:18px;padding:16px;border:1px solid var(--line);background:var(--card);border-radius:15px}
+    .voc-import-progress[hidden]{display:none!important}
+    .voc-import-progress-head,.voc-import-progress-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .voc-import-progress-head{font-size:13px;margin-bottom:12px}
+    .voc-import-progress-head span{font-family:var(--en);font-size:18px;font-weight:700;color:var(--amber);font-variant-numeric:tabular-nums}
+    .voc-import-progress-track{width:100%;height:9px;overflow:hidden;border-radius:999px;background:var(--card2);border:1px solid var(--line)}
+    .voc-import-progress-track span{display:block;width:0;height:100%;border-radius:999px;background:var(--amber);transition:width .45s ease-out}
+    .voc-import-progress-foot{margin-top:10px;color:var(--mut);font-size:11px}
+    .voc-import-progress-foot span:first-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+    @media(max-width:430px){.voc-import-progress-foot{font-size:10px;align-items:flex-start}.voc-import-progress-head{font-size:12px}}
+    @media(prefers-reduced-motion:reduce){.voc-import-progress-track span{transition:none}}
+  `;
+  document.head.appendChild(css);
+  function renderProgress(value, elapsed) {
+    progressValue = Math.max(progressValue, Math.min(100, Math.round(value)));
+    const seconds = Math.floor(elapsed / 1000);
+    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const ss = String(seconds % 60).padStart(2, '0');
+    get('vocImportProgressPercent').textContent = progressValue + '%';
+    get('vocImportProgressFill').style.width = progressValue + '%';
+    get('vocImportProgressBar').setAttribute('aria-valuenow', String(progressValue));
+    get('vocImportProgressTime').textContent = mm + ':' + ss + ' elapsed';
+  }
+  function setProgressPhase(message) { get('vocImportProgressPhase').textContent = message; }
+  function startProgress() {
+    if (progressTimer) clearInterval(progressTimer);
+    progress.hidden = false;
+    progressStartedAt = Date.now();
+    progressValue = 0;
+    get('vocImportProgressFill').style.width = '0%';
+    renderProgress(0, 0);
+    setProgressPhase('Reading your document…');
+    get('vocImportProgressHint').textContent = 'Estimated progress · 100% means ready';
+    progressTimer = setInterval(() => {
+      const elapsed = Date.now() - progressStartedAt;
+      // Visual pacing only: the API does not provide actual per-token progress.
+      // Never show 100% before a validated response.
+      const estimate = 92 * (1 - Math.exp(-elapsed / 19000));
+      renderProgress(Math.min(92, estimate), elapsed);
+      if (elapsed > 42000) setProgressPhase('Finishing vocabulary analysis…');
+      else if (elapsed > 10000) setProgressPhase('Finding the words that matter…');
+      else if (elapsed > 2500) setProgressPhase('Understanding document structure…');
+    }, 400);
+  }
+  function endProgress(success) {
+    if (progressTimer) clearInterval(progressTimer);
+    progressTimer = null;
+    if (progress.hidden) return;
+    renderProgress(success ? 100 : progressValue, Date.now() - progressStartedAt);
+    setProgressPhase(success ? 'Your vocabulary is ready ✓' : 'Analysis stopped');
+    get('vocImportProgressHint').textContent = success ? 'Completed' : 'Check the message below';
+  }
   options.forEach((item, i) => {
     const label = document.createElement('label');
     label.style.cssText = 'display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px;cursor:pointer';
@@ -151,7 +215,12 @@
       document.querySelector('.tab[data-p="mcq"]')?.click();
     };
   }
-  get('vocImportFile').addEventListener('change', () => {entries=[];selected.clear();result.innerHTML='';status.textContent='Choose an action and start analysis when ready.';});
+  get('vocImportFile').addEventListener('change', () => {
+    if (working) return;
+    entries=[];selected.clear();result.innerHTML='';
+    progress.hidden = true;
+    status.textContent='Choose an action and start analysis when ready.';
+  });
   analyze.addEventListener('click', async () => {
     if (working) return;
     const file = get('vocImportFile').files[0];
@@ -168,7 +237,8 @@
     entries = [];
     selected.clear();
     result.innerHTML = '';
-    status.textContent='Analyzing document structure and selecting study vocabulary…';
+    status.textContent='Processing your file. You can follow the progress below.';
+    startProgress();
     try {
       const dataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -190,11 +260,13 @@
       if (!response.ok) throw new Error(responseData.error || 'AI could not analyze this file.');
       entries = Array.isArray(responseData.words) ? responseData.words.slice(0,40).filter(w => w && asText(w.word)) : [];
       selected = new Set(entries.map(w => w.word.toLowerCase()));
+      endProgress(true);
       status.textContent = 'Analysis finished: ' + entries.length + ' intended vocabulary items found.' +
         (responseData.file_processing?.sampled ? ' Only selected portions of this long file could be analyzed.' : '') +
         ' Review your selection before saving.';
       showResults(responseData.file_processing);
     } catch(err) {
+      endProgress(false);
       status.textContent = err.name === 'AbortError' ? 'Analysis timed out. Try a shorter file.' : String(err.message || err);
     } finally { working = false; analyze.disabled = false; }
   });

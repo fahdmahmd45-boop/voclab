@@ -894,7 +894,7 @@ function renderDict(){
   el.innerHTML=`<div class="dwrap">
     <div style="margin-bottom:14px">
       <div style="font-family:var(--en);font-size:30px;font-weight:600;line-height:1.1">AI Search</div>
-      <div style="font-size:13px;color:var(--mut);margin-top:6px">Search any English word or phrase. Get meaning, definition, examples, and American + British pronunciation.</div>
+      <div style="font-size:13px;color:var(--mut);margin-top:6px">Look up a word or phrase for meaning, pronunciation, and examples.</div>
     </div>
     <div class="dsearch">
       <input class="search" id="dIn" placeholder="Search a word or phrase..." autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -1040,9 +1040,9 @@ function renderHome(){
   const total=allWords().length;
   const hiddenCards=allCards().filter(c=>c.id!=='MY'&&c.id[0]!=='C'&&cardHidden(c.id));
   el.innerHTML=`<div class="home">
-    <div class="eyebrow">${greeting()} \u00b7 Daily practice</div>
-    <div class="hgreet">Hello, ${userName||'there'}</div>
-    <div class="hquote">${QUOTES[Math.floor(Math.random()*QUOTES.length)]}</div>
+    <div class="eyebrow">VOCABULARY / YOUR WORKSPACE</div>
+    <div class="hgreet">${userName?'Welcome back, '+htmlText(userName):'Make words yours.'}</div>
+    <div class="hquote">Choose a deck to continue studying, or import the words you want to learn.</div>
     ${streakHTML()}
     <div class="hprog"><span><b>${masteredCount()}</b> of ${total} words mastered</span><div class="pbar"><i style="width:${total?100*masteredCount()/total:0}%"></i></div></div>
     <div class="hhead"><h3>Decks</h3><button class="iconbtn" onclick="editMode=!editMode;renderHome()">${editMode?'Done':'Edit'}</button></div>

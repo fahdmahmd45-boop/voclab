@@ -84,7 +84,7 @@ function verifiedFileWords(words, source) {
     if (!quote || !normalizedSource.includes(quote)) return false;
     // Exact source evidence prevents hallucinated words, and checks the quoted span.
     if (!quote.includes(term)) return false;
-    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\function getOutputText(data) {');
+    const escaped = term.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\$&');
     return new RegExp('(^|[^a-z])' + escaped + '(?=$|[^a-z])', 'i').test(quote);
   });
 }

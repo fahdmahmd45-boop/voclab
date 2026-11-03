@@ -462,7 +462,7 @@
       btn.setAttribute('aria-label', 'Sign in');
       return;
     }
-    btn.innerHTML = `${iconUser}<span class="voc-auth-label-text">Account</span><span class="voc-auth-badge">${plan === 'pro' ? 'PRO LIFETIME' : plan === 'pro_monthly' ? 'PRO MONTHLY' : 'FREE'}</span>`;
+    btn.innerHTML = `${iconUser}<span class="voc-auth-label-text">Account</span><span class="voc-auth-badge">${plan === 'pro' ? 'PRO' : plan === 'pro_monthly' ? 'PRO M' : 'FREE'}</span>`;
     btn.setAttribute('aria-label', 'Open account');
   }
 

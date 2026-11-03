@@ -366,7 +366,11 @@ module.exports = async function handler(req, res) {
         reasoning: { effort: 'none' },
         store: false,
         max_output_tokens: mode === 'file' ? FILE_MAX_OUTPUT_TOKENS : 750,
-        input: [{ role: 'user', content }],
+        // Keep the file itself at user priority, below our application instructions.
+        // No tools are provided to the model, and secrets never enter these messages.
+        input: mode === 'file'
+          ? [{ role: 'developer', content: [content[0]] }, { role: 'user', content: [content[1]] }]
+          : [{ role: 'user', content }],
         text: {
           format: {
             type: 'json_schema',

@@ -141,7 +141,8 @@ async function extractFileText(ext, fileData, maxChars = MAX_MODEL_FILE_CHARS) {
   let raw = '';
   try {
     if (ext === 'pdf') {
-      const parsed = await pdfParse(buffer);
+      // Hard cap on pages parsed in the serverless process.
+      const parsed = await pdfParse(buffer, { max: 40 });
       raw = String(parsed?.text || '');
     } else if (ext === 'txt' || ext === 'csv' || ext === 'json' || ext === 'md') {
       raw = buffer.toString('utf8');

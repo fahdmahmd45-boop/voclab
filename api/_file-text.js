@@ -108,7 +108,7 @@ async function openXmlText(buffer, ext) {
   return pieces.join('\n');
 }
 
-async function extractFileText(ext, fileData) {
+async function extractFileText(ext, fileData, maxChars = MAX_MODEL_FILE_CHARS) {
   const buffer = decodeDataUrl(fileData);
   if (!buffer || !buffer.length) {
     return { ok: false, status: 400, code: 'FILE_DATA_INVALID', error: 'Please choose the file again.' };
@@ -155,7 +155,7 @@ async function extractFileText(ext, fileData) {
     };
   }
 
-  const sampled = sampleAcrossText(normalized);
+  const sampled = sampleAcrossText(normalized, maxChars);
   return {
     ok: true,
     text: sampled.text,

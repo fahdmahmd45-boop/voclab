@@ -19,7 +19,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          GITLEAKS_BIN="$(find /tmp -type f -path '*/gitleaks-*/gitleaks' -print -quit)"
+          GITLEAKS_BIN=""
+          for candidate in /tmp/gitleaks-*/gitleaks; do
+            if [ -x "$candidate" ]; then GITLEAKS_BIN="$candidate"; break; fi
+          done
           if [ -z "$GITLEAKS_BIN" ]; then
             echo "Gitleaks executable not available"
             exit 1

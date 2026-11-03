@@ -262,7 +262,7 @@ body,header,.row,.fcard,.qword,.tprompt,.opt,.tab,select,.search,.tin,.myin,.dra
     font-size:11px;
     line-height:1.2;
   }
-  .tabs .tab:nth-child(n+5){grid-column:span 4}
+  .tabs .tab:nth-child(n+5){grid-column:span 3}
   .home-tab{gap:4px}
   .home-tab svg{width:14px;height:14px}
 }
@@ -352,12 +352,12 @@ html,body{max-width:100%;overflow-x:hidden}
   <div class="tabs">
     <button class="tab on home-tab" data-p="home" title="Level selection"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Home</span></button>
     <button class="tab" data-p="dict">AI Search</button>
+    <button class="tab" data-p="files">Files</button>
     <button class="tab" data-p="list">Browse</button>
     <button class="tab" data-p="cards">Flashcards</button>
     <button class="tab" data-p="mcq">Quiz</button>
     <button class="tab" data-p="type">Spelling</button>
     <button class="tab" data-p="my">Add Word</button>
-    <button class="tab" data-p="files">Files</button>
   </div>
   <div class="panel on" id="p-home"></div>
   <div class="panel" id="p-dict"></div>

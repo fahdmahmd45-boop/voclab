@@ -127,7 +127,7 @@ function unitLabel(u){if(u==='MY')return'Added Words';if(u[0]==='C')return deckN
 function rebuildUnits(){
   const src=fSrc.value;
   const units=[...new Set(allWords().filter(w=>src==='all'||w[0][0]===src).map(w=>w[0]))];
-  fUnit.innerHTML='<option value="all">All units</option>'+units.map(u=>`<option value="${u}">${unitLabel(u)}</option>`).join('');
+  fUnit.innerHTML='<option value="all">All units</option>'+units.map(u=>`<option value="${u}">${htmlText(unitLabel(u))}</option>`).join('');
 }
 function pool(){
   const src=fSrc.value,u=fUnit.value,k=fKnown.value,q=fSearch.value.trim().toLowerCase();
@@ -698,7 +698,7 @@ function renderMy(){
     <div class="mygrid" style="padding:0 18px 18px">
       <select class="myin full" id="mDeck">
         <option value="MY">→ Added Words</option>
-        ${myDecks.map(d=>`<option value="${d.id}">→ ${d.t}</option>`).join('')}
+        ${myDecks.map(d=>`<option value="${htmlText(d.id)}">→ ${htmlText(d.t)}</option>`).join('')}
       </select>
       <textarea class="myin full" id="mPaste" dir="ltr" rows="4" spellcheck="false" style="resize:vertical;font-family:monospace;font-size:12px" placeholder='["MY","word","noun","المعنى","Example sentence."],'></textarea>
       <button class="addbtn" onclick="pasteImport()">Import pasted words</button>
@@ -1095,7 +1095,7 @@ function askName(change){
     <div class="nbrand">voclab</div>
     <h2>${change?'Change your name':'Welcome'}</h2>
     <p>${change?'Update the name we greet you with.':'What should we call you?'}</p>
-    <input class="search" id="nameIn" maxlength="20" placeholder="Your name" value="${userName}">
+    <input class="search" id="nameIn" maxlength="20" placeholder="Your name" value="${htmlText(userName)}">
     <button class="next" onclick="saveName()">${change?'Save':'Start learning'}</button>
   </div>`;
   document.body.appendChild(ov);

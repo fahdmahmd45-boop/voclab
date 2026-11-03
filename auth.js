@@ -32,6 +32,14 @@
       .voc-auth-badge{font-size:9px;letter-spacing:.09em;text-transform:uppercase;border:1px solid var(--line);color:var(--tx);padding:2px 5px;border-radius:999px;font-weight:700}
       .voc-auth-overlay{position:fixed;inset:0;z-index:120;background:rgba(5,6,8,.64);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
       .voc-auth-overlay.open{opacity:1;pointer-events:auto}
+      /* iOS Safari: keep a tall account dialog entirely navigable. */
+      .voc-auth-overlay{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-items:flex-start;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 20px)}
+      .voc-auth-card{flex:0 0 auto;margin:auto;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+      .voc-auth-head{position:sticky;top:-24px;z-index:2;background:var(--hd);padding-top:12px;padding-bottom:10px;margin-top:-12px}
+      .voc-auth-close{flex:none;min-width:40px;min-height:40px;touch-action:manipulation}
+      @supports not (height:100dvh){.voc-auth-card{max-height:calc(100vh - 40px)}}
+      @media(max-width:540px){.voc-auth-head{top:-20px}}
+
       .voc-auth-card{width:min(430px,100%);background:var(--hd);border:1px solid var(--line);border-radius:22px;box-shadow:0 26px 70px rgba(0,0,0,.28);padding:24px;transform:translateY(8px) scale(.985);transition:transform .2s ease}
       .voc-auth-overlay.open .voc-auth-card{transform:none}
       .voc-auth-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}

@@ -201,21 +201,13 @@ function parseDataUrl(fileData) {
 }
 
 function mimeIsReasonable(ext, mime) {
-  if (!mime || mime === 'application/octet-stream') return true;
-  const expected = {
+  // MIME is client-supplied and never sufficient on its own: verify the bytes below.
+  const allowed = {
     pdf: ['application/pdf'],
-    txt: ['text/plain'],
-    csv: ['text/csv', 'text/plain', 'application/vnd.ms-excel'],
-    json: ['application/json', 'text/json', 'text/plain'],
-    md: ['text/markdown', 'text/plain'],
-    doc: ['application/msword', 'application/x-ole-storage'],
-    docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
-    ppt: ['application/vnd.ms-powerpoint', 'application/x-ole-storage'],
-    pptx: ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
-    xls: ['application/vnd.ms-excel', 'application/x-ole-storage'],
-    xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip']
+    docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    txt: ['text/plain']
   };
-  return (expected[ext] || []).includes(mime);
+  return (allowed[ext] || []).includes(String(mime || '').toLowerCase());
 }
 
 function validateUploadedFile(filename, fileData, maxBytes = MAX_FILE_BYTES) {

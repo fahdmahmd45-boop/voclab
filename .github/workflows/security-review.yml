@@ -24,3 +24,9 @@ jobs:
           node-version: '22'
       - run: npm install --package-lock-only --ignore-scripts
       - run: npm audit --audit-level=high --omit=dev
+      - run: npm install --ignore-scripts
+      - run: node --test tests/security-uploads.test.js
+      - run: node --check api/ai.js
+      - run: node --check api/_security.js
+      - run: node --check api/_file-text.js
+      - run: node --check assets/inline-script-1.js

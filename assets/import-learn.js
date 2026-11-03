@@ -15,6 +15,7 @@
   let working = false;
   let lastIntent = 'explain';
   let lastFile = '';
+  let savedDeckId = '';
 
   panel.innerHTML =
     '<div class="home" style="max-width:700px">' +
@@ -120,23 +121,33 @@
       const message = get('vocImportSaveStatus');
       if (!chosen.length) { message.textContent = 'Select at least one word first.'; return false; }
       if (typeof myWords === 'undefined' || typeof saveMy !== 'function') { message.textContent='The deck is not ready. Reload the page.'; return false; }
+      if (!savedDeckId) {
+        const title = 'Import · ' + lastFile.replace(/\.[^.]+$/, '').slice(0, 45);
+        const existing = myDecks.find(d => d.t === title);
+        if (existing) savedDeckId = existing.id;
+        else {
+          savedDeckId = 'C' + Date.now();
+          myDecks.push({id: savedDeckId, t:title, badge:'IM'});
+          saveDecks();
+        }
+      }
       let saved = 0;
       for (const w of chosen) {
-        if (myWords.some(x => x[0] === 'MY' && String(x[1]).toLowerCase() === w.word.toLowerCase())) continue;
-        myWords.push(['MY', w.word, w.type, w.arabic || '—', w.example || '', w.ipa || '', w.english_definition || '']);
+        if (myWords.some(x => x[0] === savedDeckId && String(x[1]).toLowerCase() === w.word.toLowerCase())) continue;
+        myWords.push([savedDeckId, w.word, w.type, w.arabic || '—', w.example || '', w.ipa || '', w.english_definition || '']);
         saved++;
       }
       if (saved) { saveMy(); updProg(); rebuildUnits(); }
-      message.textContent = saved + ' new words saved. ' + (chosen.length-saved) + ' already in Added Words.';
+      message.textContent = saved + ' new words saved to ' + myDecks.find(d => d.id === savedDeckId)?.t + '. ' + (chosen.length-saved) + ' already in this deck.';
       return true;
     }
     get('vocImportSave').onclick = save;
     get('vocImportQuiz').onclick = () => {
       if (!save()) return;
-      fSrc.value = 'M';
+      fSrc.value = 'C';
       picked = true;
       rebuildUnits();
-      fUnit.value = 'all';
+      fUnit.value = savedDeckId;
       document.querySelector('.tab[data-p="mcq"]')?.click();
     };
   }
@@ -153,6 +164,7 @@
     analyze.disabled = true;
     lastIntent = chosenIntent;
     lastFile = file.name;
+    savedDeckId = '';
     entries = [];
     selected.clear();
     result.innerHTML = '';

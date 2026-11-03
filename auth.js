@@ -175,9 +175,9 @@
         <div class="voc-auth-sub">Your VocLab progress can follow you across devices once cloud sync is enabled for the project.</div>
         <div class="voc-auth-account">
           <div class="voc-auth-row"><div><small>Email</small><strong>${escapeHtml(maskEmail(session.user.email))}</strong></div><span class="voc-auth-status"><i class="voc-auth-dot"></i> Verified</span></div>
-          <div class="voc-auth-row"><div><small>Plan</small><strong>${plan === 'pro' ? 'VocLab Pro' : 'VocLab Free'}</strong></div><span class="voc-auth-plan">${plan === 'pro' ? 'PRO' : 'FREE'}</span></div>
+          <div class="voc-auth-row"><div><small>Plan</small><strong>${plan === 'pro' ? 'VocLab Pro Lifetime' : plan === 'pro_monthly' ? 'VocLab Pro Monthly' : 'VocLab Free'}</strong></div><span class="voc-auth-plan">${plan === 'pro' ? 'PRO LIFETIME' : plan === 'pro_monthly' ? 'PRO MONTHLY' : 'FREE'}</span></div>
         </div>
-        ${plan === 'pro' ? '' : `<div class="voc-auth-pro-card"><div class="voc-auth-pro-top"><strong>VocLab Pro</strong><span class="voc-auth-price">35 SAR · lifetime</span></div><p>One-time payment. Get 300 AI credits every month for the lifetime of VocLab, while the service operates. Contact @voclab_sa on Instagram to activate Pro.</p><button type="button" class="voc-auth-primary" disabled>Upgrade coming soon</button></div>`}
+        ${plan !== 'free' ? '' : `<div class="voc-auth-pro-card"><div class="voc-auth-pro-top"><strong>Pro Monthly</strong><span class="voc-auth-price">15 SAR / month</span></div><p>Planned: 750 AI Credits per month. Subscriptions and credit top-ups are not available for purchase yet.</p><button type="button" class="voc-auth-primary" disabled>Subscriptions coming soon</button></div>`}
         <button type="button" class="voc-auth-danger" id="vocAuthSignOut">Sign out</button>
         <div class="voc-auth-error" id="vocAuthError"></div>
       `;
@@ -361,7 +361,7 @@
     if (!client || !userId) return;
     try {
       const { data, error } = await client.from('profiles').select('plan').eq('id', userId).maybeSingle();
-      if (!error && (data?.plan === 'pro' || data?.plan === 'free')) plan = data.plan;
+      if (!error && (data?.plan === 'pro' || data?.plan === 'pro_monthly' || data?.plan === 'free')) plan = data.plan;
     } catch {}
   }
 
@@ -462,7 +462,7 @@
       btn.setAttribute('aria-label', 'Sign in');
       return;
     }
-    btn.innerHTML = `${iconUser}<span class="voc-auth-label-text">Account</span><span class="voc-auth-badge">${plan === 'pro' ? 'PRO' : 'FREE'}</span>`;
+    btn.innerHTML = `${iconUser}<span class="voc-auth-label-text">Account</span><span class="voc-auth-badge">${plan === 'pro' ? 'PRO LIFETIME' : plan === 'pro_monthly' ? 'PRO MONTHLY' : 'FREE'}</span>`;
     btn.setAttribute('aria-label', 'Open account');
   }
 

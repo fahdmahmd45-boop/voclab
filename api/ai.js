@@ -84,7 +84,7 @@ function verifiedFileWords(words, source) {
     if (!quote || !normalizedSource.includes(quote)) return false;
     // Exact source evidence prevents hallucinated words, and checks the quoted span.
     if (!quote.includes(term)) return false;
-    const escaped = term.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\    const escaped = term.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\$&');');
+    const escaped = term.split('').map(c => /[a-z0-9 ]/.test(c) ? c : '\\' + c).join('');
     // Incidental grammar words should never be treated as vocabulary unless
     // explicitly listed as standalone study headwords in the source.
     const filler = new Set(['the','that','her','for','and','but','are','was','were','who','which','their','they','them','this','those','these','you','your','have','has','had','is','am','of','to','in','on','at','by','from','with','as','or','not','be','been','being','its','it']);

@@ -15,6 +15,16 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan all reachable Git history, not only the PR diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          GITLEAKS_BIN="$(find /tmp -type f -path '*/gitleaks-*/gitleaks' -print -quit)"
+          if [ -z "$GITLEAKS_BIN" ]; then
+            echo "Gitleaks executable not available"
+            exit 1
+          fi
+          "$GITLEAKS_BIN" detect --source . --redact --no-banner --exit-code 2
   dependencies:
     runs-on: ubuntu-latest
     steps:

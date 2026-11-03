@@ -349,15 +349,11 @@ html,body{max-width:100%;overflow-x:hidden}
 <div class="overlay" id="overlay"></div>
 <main>
   
-  <button type="button" id="vocFilesShortcut" aria-label="Upload a file" onclick="document.querySelector('.tab[data-p=files]')?.click()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:49px;margin:0 0 12px;padding:12px 16px;border:1px solid var(--amber);border-radius:13px;background:var(--card);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m0 0L7 8m5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-    <span>Upload File · رفع ملف</span>
-  </button>
   <div class="tabs">
     <button class="tab on home-tab" data-p="home" title="Level selection"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Home</span></button>
     <button class="tab" data-p="dict">AI Search</button>
-    <button class="tab" data-p="files">Files</button>
     <button class="tab" data-p="list">Browse</button>
+    <button class="tab" data-p="files">Files</button>
     <button class="tab" data-p="cards">Flashcards</button>
     <button class="tab" data-p="mcq">Quiz</button>
     <button class="tab" data-p="type">Spelling</button>

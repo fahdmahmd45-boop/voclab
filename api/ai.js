@@ -260,6 +260,10 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({ error: 'AI is not configured yet.', code: 'OPENAI_API_KEY_MISSING' });
   }
 
+  const mime = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (mime !== 'application/json') {
+    return res.status(415).json({ error: 'Use application/json.' });
+  }
   if (tooLargeByHeader(req)) {
     return res.status(413).json({ error: 'Request is too large.' });
   }
@@ -275,7 +279,13 @@ module.exports = async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON body.' }); }
   }
-  body = body || {};
+  if (!body || Array.isArray(body) || typeof body !== 'object') {
+    return res.status(400).json({ error: 'Expected a JSON object.' });
+  }
+  // A malicious client can omit or falsify Content-Length. Enforce a body cap too.
+  if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 3_600_000) {
+    return res.status(413).json({ error: 'Request is too large.' });
+  }
   if (body.mode !== 'word' && body.mode !== 'file') return res.status(400).json({ error: 'Invalid analysis mode.' });
   const mode = body.mode;
   const creditCost = mode === 'file' ? FILE_CREDIT_COST : WORD_CREDIT_COST;
@@ -285,7 +295,7 @@ module.exports = async function handler(req, res) {
 
   if (mode === 'word') {
     const word = String(body.word || '').trim();
-    if (!word || word.length > 120) return res.status(400).json({ error: 'Enter a valid English word or phrase.' });
+    if (!word || word.length > 120 || /[\u0000-\u001f\u007f]/.test(word)) return res.status(400).json({ error: 'Enter a valid English word or phrase.' });
     content.push({
       type: 'input_text',
       text: body.dialects === true
@@ -356,7 +366,11 @@ module.exports = async function handler(req, res) {
         reasoning: { effort: 'none' },
         store: false,
         max_output_tokens: mode === 'file' ? FILE_MAX_OUTPUT_TOKENS : 750,
-        input: [{ role: 'user', content }],
+        // Keep the file itself at user priority, below our application instructions.
+        // No tools are provided to the model, and secrets never enter these messages.
+        input: mode === 'file'
+          ? [{ role: 'developer', content: [content[0]] }, { role: 'user', content: [content[1]] }]
+          : [{ role: 'user', content }],
         text: {
           format: {
             type: 'json_schema',

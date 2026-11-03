@@ -1,0 +1,12 @@
+title = "VOC LAB Secret Detection"
+[extend]
+useDefault = true
+
+# Gitleaks 8.24 uses singular [allowlist].
+# This exception only matches the deliberately public Supabase publishable-key
+# format and auth.js, not private service_role, OpenAI, or Upstash tokens.
+[allowlist]
+description = "Supabase public client key in auth.js, protected by Supabase RLS"
+regexTarget = "secret"
+regexes = ['''^sb_publishable_[A-Za-z0-9_]+$''']
+paths = ['''^auth\.js$''']

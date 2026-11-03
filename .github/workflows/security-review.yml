@@ -1,0 +1,57 @@
+name: Security review
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  secrets-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan complete checked-out history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan all reachable Git history, not only the PR diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          GITLEAKS_BIN=""
+          for candidate in /tmp/gitleaks-*/gitleaks; do
+            if [ -x "$candidate" ]; then GITLEAKS_BIN="$candidate"; break; fi
+          done
+          if [ -z "$GITLEAKS_BIN" ]; then
+            echo "Gitleaks executable not available"
+            exit 1
+          fi
+          "$GITLEAKS_BIN" detect --source . --redact --no-banner --exit-code 0 --report-format json --report-path full-history-gitleaks.json
+          jq -r '.[] | "Detected: file=" + .File + " line=" + (.StartLine|tostring) + " rule=" + .RuleID + " commit=" + .Commit' full-history-gitleaks.json
+          if [ "$(jq 'length' full-history-gitleaks.json)" -gt 0 ]; then
+            echo "Confirmed historical secret patterns. Rotate and inspect before merge."
+            exit 2
+          fi
+      - name: Upload redacted history findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-history-gitleaks
+          path: full-history-gitleaks.json
+          retention-days: 7
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm audit --audit-level=high --omit=dev
+      - run: npm install --ignore-scripts
+      - run: node --test tests/security-uploads.test.js
+      - run: node --check api/ai.js
+      - run: node --check api/_security.js
+      - run: node --check api/_file-text.js
+      - run: node --check assets/inline-script-1.js

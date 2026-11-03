@@ -6,7 +6,9 @@ const { Redis } = require('@upstash/redis');
 const NETWORK_MINUTE_LIMIT = 5;
 const NETWORK_DAILY_LIMIT = 100;
 const MAX_CONTENT_LENGTH_BYTES = 3_600_000;
-const ALLOWED_EXT = new Set(['pdf','txt','csv','json','md','doc','docx','ppt','pptx','xls','xlsx']);
+const ALLOWED_EXT = new Set(['pdf','docx','txt']);
+const MAX_FILE_BYTES = 2500000;
+const MAX_BASE64_CHARS = Math.ceil(MAX_FILE_BYTES / 3) * 4 + 256;
 
 let limiters;
 const fallbackNetworkLimits = new Map();
@@ -109,7 +111,10 @@ async function enforceNetworkRateLimit(req) {
   const ip = getClientIp(req);
 
   if (!active) {
-    console.warn('Upstash rate limit is not configured; using per-instance fallback limiter.');
+    if (process.env.VERCEL_ENV === 'production') {
+      console.error('Production network rate limit storage is not configured.');
+      return { ok: false, status: 503, code: 'RATE_LIMIT_UNAVAILABLE', error: 'AI protection is temporarily unavailable.' };
+    }
     return enforceFallbackNetworkRateLimit(ip);
   }
 
@@ -139,6 +144,9 @@ async function enforceNetworkRateLimit(req) {
     return { ok: true, ip };
   } catch (error) {
     console.error('Upstash rate limit error', error?.message || error);
+    if (process.env.VERCEL_ENV === 'production') {
+      return { ok: false, status: 503, code: 'RATE_LIMIT_UNAVAILABLE', error: 'AI protection is temporarily unavailable.' };
+    }
     return enforceFallbackNetworkRateLimit(ip);
   }
 }
@@ -193,56 +201,53 @@ function parseDataUrl(fileData) {
 }
 
 function mimeIsReasonable(ext, mime) {
-  if (!mime || mime === 'application/octet-stream') return true;
-  const expected = {
+  // MIME is client-supplied and never sufficient on its own: verify the bytes below.
+  const allowed = {
     pdf: ['application/pdf'],
-    txt: ['text/plain'],
-    csv: ['text/csv', 'text/plain', 'application/vnd.ms-excel'],
-    json: ['application/json', 'text/json', 'text/plain'],
-    md: ['text/markdown', 'text/plain'],
-    doc: ['application/msword', 'application/x-ole-storage'],
-    docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
-    ppt: ['application/vnd.ms-powerpoint', 'application/x-ole-storage'],
-    pptx: ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
-    xls: ['application/vnd.ms-excel', 'application/x-ole-storage'],
-    xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip']
+    docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    txt: ['text/plain']
   };
-  return (expected[ext] || []).includes(mime);
+  return (allowed[ext] || []).includes(String(mime || '').toLowerCase());
 }
 
-function validateUploadedFile(filename, fileData, maxBytes) {
-  const cleanName = String(filename || '').replace(/[\\/]/g, '').slice(0, 160);
-  const ext = (cleanName.split('.').pop() || '').toLowerCase();
-  if (!cleanName || !ALLOWED_EXT.has(ext)) {
-    return { ok: false, status: 400, error: 'Unsupported file type. Use PDF, Word, PowerPoint, Excel, TXT, CSV, JSON, or Markdown.' };
+function validateUploadedFile(filename, fileData, maxBytes = MAX_FILE_BYTES) {
+  // Reject path traversal, control/bidi marks, and disguised double extensions.
+  const name = typeof filename === 'string' ? filename : '';
+  if (!name || name.length > 120 || /[\/\\\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/u.test(name) ||
+      name.startsWith('.') || name.includes('..') ||
+      !/^[\p{L}\p{N} _()&,+-]+\.(pdf|docx|txt)$/iu.test(name) ||
+      /\.(exe|php|js|html?|svg|bat|cmd|sh|ps1|msi|scr|com|pif|vbs|jar|dll)\./i.test(name)) {
+    return { ok: false, status: 400, error: 'Invalid file name. Use safe letters and one PDF, DOCX or TXT extension.' };
   }
-
-  const parsed = parseDataUrl(String(fileData || ''));
+  const ext = name.split('.').pop().toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) return { ok: false, status: 400, error: 'Use PDF, DOCX or TXT.' };
+  if (typeof fileData !== 'string' || fileData.length > MAX_BASE64_CHARS + 100) {
+    return { ok: false, status: 413, error: 'File is too large.' };
+  }
+  const parsed = parseDataUrl(fileData);
   if (!parsed || !parsed.buffer.length) {
-    return { ok: false, status: 400, error: 'The uploaded file data is invalid. Please choose the file again.' };
+    return { ok: false, status: 400, error: 'The uploaded file data is invalid.' };
   }
-  if (parsed.buffer.length > maxBytes) {
+  if (parsed.buffer.length > Math.min(MAX_FILE_BYTES, maxBytes)) {
     return { ok: false, status: 413, error: 'File is too large. Maximum size is 2.5 MB.' };
   }
   if (!mimeIsReasonable(ext, parsed.mime)) {
-    return { ok: false, status: 400, error: 'The file content does not match its declared file type.' };
+    return { ok: false, status: 400, error: 'MIME type does not match the expected file format.' };
   }
-
   let valid = false;
-  if (ext === 'pdf') valid = parsed.buffer.subarray(0, 5).toString('ascii') === '%PDF-';
-  else if (ext === 'docx' || ext === 'pptx' || ext === 'xlsx') valid = officeZipMatches(parsed.buffer, ext);
-  else if (ext === 'doc' || ext === 'ppt' || ext === 'xls') valid = isOle(parsed.buffer);
-  else if (ext === 'json') {
-    if (looksLikeText(parsed.buffer)) {
-      try { JSON.parse(parsed.buffer.toString('utf8')); valid = true; } catch { valid = false; }
+  if (ext === 'pdf') {
+    valid = parsed.buffer.subarray(0,5).toString('ascii') === '%PDF-' &&
+      parsed.buffer.subarray(Math.max(0, parsed.buffer.length - 2048)).includes(Buffer.from('%%EOF'));
+    if (/\/(?:JS|JavaScript|OpenAction|AA|Launch|EmbeddedFile|RichMedia)\b/i.test(parsed.buffer.toString('latin1'))) {
+      return { ok: false, status: 400, error: 'PDF containing scripts, actions, or attachments is not supported.' };
     }
-  } else valid = looksLikeText(parsed.buffer);
-
-  if (!valid) {
-    return { ok: false, status: 400, error: 'The file content does not match the selected file type.' };
+  } else if (ext === 'docx') {
+    valid = officeZipMatches(parsed.buffer, ext);
+  } else if (ext === 'txt') {
+    valid = looksLikeText(parsed.buffer) && !parsed.buffer.toString('utf8').includes('\uFFFD');
   }
-
-  return { ok: true, filename: cleanName, ext, fileData };
+  if (!valid) return { ok: false, status: 400, error: 'File content does not match the declared type.' };
+  return { ok: true, filename: name, ext, fileData };
 }
 
 module.exports = {

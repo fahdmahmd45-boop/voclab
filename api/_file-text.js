@@ -86,8 +86,29 @@ function naturalSort(a, b) {
 }
 
 async function openXmlText(buffer, ext) {
-  const zip = await JSZip.loadAsync(buffer);
+  // Office ZIP input remains untrusted even after checking its outer PK signature.
+  // Examine central-directory sizes BEFORE decompressing any XML entry.
+  const zip = await JSZip.loadAsync(buffer, { checkCRC32: false, createFolders: false });
   const names = Object.keys(zip.files).filter((name) => !zip.files[name].dir);
+  if (names.length > 180) throw new Error('Too many DOCX entries');
+  let totalExpanded = 0;
+  for (const name of names) {
+    if (name.includes('..') || name.startsWith('/') || name.includes('\\')) throw new Error('Invalid ZIP entry path');
+    if (/\.(?:exe|dll|js|html?|svg|vbs|bin)$/i.test(name) ||
+        /(?:vbaProject|activeX|embeddings|oleObject|customXml)/i.test(name)) {
+      throw new Error('DOCX active or embedded content rejected');
+    }
+    const entry = zip.files[name];
+    const plain = entry?._data?.uncompressedSize;
+    const packed = entry?._data?.compressedSize;
+    if (!Number.isSafeInteger(plain) || plain < 0 || !Number.isSafeInteger(packed) || packed < 0) {
+      throw new Error('Unverifiable ZIP size');
+    }
+    if (plain > 3_000_000 || (packed < 128 && plain > 16_384) ||
+        (packed > 0 && plain / packed > 150)) throw new Error('DOCX compression bomb rejected');
+    totalExpanded += plain;
+    if (totalExpanded > 6_000_000) throw new Error('DOCX expands beyond safe limit');
+  }
   let selected = [];
 
   if (ext === 'docx') {
@@ -102,6 +123,9 @@ async function openXmlText(buffer, ext) {
   const pieces = [];
   for (const name of selected) {
     const xml = await zip.files[name].async('string');
+    if (xml.length > 3_000_000 || /<!DOCTYPE|<!ENTITY|<\?xml-stylesheet|<script\b/i.test(xml)) {
+      throw new Error('DOCX XML active content rejected');
+    }
     const text = xmlToText(xml);
     if (text.trim()) pieces.push(text);
   }
@@ -117,7 +141,8 @@ async function extractFileText(ext, fileData, maxChars = MAX_MODEL_FILE_CHARS) {
   let raw = '';
   try {
     if (ext === 'pdf') {
-      const parsed = await pdfParse(buffer);
+      // Hard cap on pages parsed in the serverless process.
+      const parsed = await pdfParse(buffer, { max: 40 });
       raw = String(parsed?.text || '');
     } else if (ext === 'txt' || ext === 'csv' || ext === 'json' || ext === 'md') {
       raw = buffer.toString('utf8');

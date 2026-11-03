@@ -374,11 +374,8 @@ module.exports = async function handler(req, res) {
     let parsed;
     try { parsed = JSON.parse(text); } catch { return res.status(502).json({ error: 'AI returned an unreadable response.', code: 'AI_INVALID_RESPONSE' }); }
     const words = mode === 'file' ? verifiedFileWords(parsed.words, fileMeta?.source_text || '') : cleanWords(parsed.words, 1);
-    if (!words.length) {
-      return res.status(422).json({
-        error: mode === 'file' ? 'No useful English vocabulary was found in this file.' : 'Could not build this vocabulary entry.',
-        code: mode === 'file' ? 'NO_VOCABULARY_FOUND' : 'VOCABULARY_BUILD_FAILED'
-      });
+    if (!words.length && mode !== 'file') {
+      return res.status(422).json({ error: 'Could not build this vocabulary entry.', code: 'VOCABULARY_BUILD_FAILED' });
     }
 
     const payload = {

@@ -541,13 +541,21 @@
       patchAiFetch();
       const { data } = await client.auth.getSession();
       await handleSession(data?.session || null, false);
+      // Supabase callbacks run under an auth lock. Do not query Supabase
+      // (profiles / user_state) directly from that callback: it can deadlock.
+      let authEventVersion = 0;
       client.auth.onAuthStateChange((event, nextSession) => {
         if (event === 'TOKEN_REFRESHED') {
           session = nextSession || session;
           return;
         }
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') handleSession(nextSession || null, event === 'SIGNED_IN');
-        if (event === 'SIGNED_OUT') handleSession(null, false);
+        if (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT') return;
+        const version = ++authEventVersion;
+        setTimeout(() => {
+          if (version !== authEventVersion) return;
+          Promise.resolve(handleSession(event === 'SIGNED_OUT' ? null : nextSession, event === 'SIGNED_IN'))
+            .catch(error => console.error('VocLab account refresh failed:', error));
+        }, 0);
       });
       window.addEventListener('beforeunload', () => { if (session?.user && syncAvailable) syncState(false); });
     } catch (error) {

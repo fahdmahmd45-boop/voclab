@@ -22,8 +22,8 @@
 
   panel.innerHTML =
     '<div class="home" style="max-width:700px">' +
-    '<div class="eyebrow">Import & Learn</div><h2 class="hgreet">Your file. Your vocabulary.</h2>' +
-    '<p style="color:var(--mut);margin:8px 0 18px">Choose what to study first. AI identifies target vocabulary, not random words from explanations and questions.</p>' +
+    '<div class="eyebrow">Import & Learn</div><h2 class="hgreet">Study what matters.</h2>' +
+    '<p style="color:var(--mut);margin:8px 0 18px">Import a document and choose what you want to learn. Review the extracted terms before saving.</p>' +
     '<div class="myform">' +
     '<label for="vocImportFile" style="display:block;font-weight:600;margin-bottom:9px">1 · Upload your file</label>' +
     '<input id="vocImportFile" class="myin" type="file" style="width:100%" accept=".pdf,.docx,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">' +
@@ -40,7 +40,7 @@
     '<div id="vocImportProgress" hidden class="voc-import-progress" role="group" aria-label="File analysis progress">' +
     '<div class="voc-import-progress-head"><strong id="vocImportProgressPhase">Preparing your file…</strong><span id="vocImportProgressPercent">0%</span></div>' +
     '<div class="voc-import-progress-track" role="progressbar" aria-label="Estimated preparation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="vocImportProgressBar"><span id="vocImportProgressFill"></span></div>' +
-    '<div class="voc-import-progress-foot"><span id="vocImportProgressTime">00:00 elapsed</span><span id="vocImportProgressHint">Visual estimate · processing time varies</span></div>' +
+    '<div class="voc-import-progress-foot"><span id="vocImportProgressTime">00:00 elapsed</span><span id="vocImportProgressHint">Estimated progress · actual processing time varies</span></div>' +
     '</div>' +
     '<p id="vocImportStatus" role="status" aria-live="polite" style="font-size:13px;color:var(--mut);margin-top:12px"></p>' +
     '</div><div id="vocImportResults"></div></div>';
@@ -102,7 +102,7 @@
     progressTimer = null;
     if (progress.hidden) return;
     renderProgress(success ? 100 : progressValue, Date.now() - progressStartedAt);
-    setProgressPhase(success ? 'Your vocabulary is ready ✓' : 'Analysis stopped');
+    setProgressPhase(success ? 'Review your words' : 'Analysis stopped');
     get('vocImportProgressHint').textContent = success ? 'Completed' : 'Check the message below';
   }
   options.forEach((item, i) => {
@@ -219,7 +219,7 @@
     if (working) return;
     entries=[];selected.clear();result.innerHTML='';
     progress.hidden = true;
-    status.textContent='Choose an action and start analysis when ready.';
+    status.textContent='Choose what to study, then analyze your file.';
   });
   analyze.addEventListener('click', async () => {
     if (working) return;
@@ -237,7 +237,7 @@
     entries = [];
     selected.clear();
     result.innerHTML = '';
-    status.textContent='Processing your file. You can follow the progress below.';
+    status.textContent='Reading your file and identifying the selected terms…';
     startProgress();
     try {
       const dataUrl = await new Promise((resolve, reject) => {

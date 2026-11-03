@@ -94,7 +94,7 @@ function verifiedFileWords(words, source) {
     }
 
     return new RegExp('(^|[^a-z])' + escaped + '(?=$|[^a-z])', 'i').test(quote);
-  });
+  }).map(x => ({ ...x, source_excerpt: String(byWord.get(x.word.toLowerCase()).source_excerpt || '').slice(0, 180) }));
 }
 
 function getOutputText(data) {

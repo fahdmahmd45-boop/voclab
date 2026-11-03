@@ -503,10 +503,12 @@ function quizUniqueOptions(values,key){
 function startMcq(){
   if(!picked&&fSrc.value==='all'){document.getElementById('p-mcq').innerHTML=guardHTML();return}
   const all=pool();
+  // Do not start questions that cannot have four distinct valid answers.
+  const distinctDefinitions=quizUniqueOptions(all.filter(w=>String(w?.[6]||'').trim()),w=>w[6]).length;
   const eligible=quizLanguage==='english'
-    ? all.filter(w=>String(w?.[6]||'').trim()||quizCloze(w))
+    ? all.filter(w=>quizCloze(w)||(distinctDefinitions>=4&&String(w?.[6]||'').trim()))
     : all.filter(w=>String(w?.[3]||'').trim());
-  qDeck=shuffle(quizUniqueOptions(eligible,w=>w[1]));
+  qDeck=shuffle(quizUniqueOptions(eligible,w=>quizLanguage==='arabic'?w[3]:w[1]));
   qI=0;
   qScore=0;
   renderMcq();

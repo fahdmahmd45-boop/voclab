@@ -39,6 +39,13 @@
         text-align:center;
         text-decoration:none;
       }
+      .voc-topup-plans{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+      .voc-topup-plans strong{font-size:12px;color:var(--tx)}
+      .voc-topup-plans p{font-size:11px;color:var(--mut);margin:5px 0 10px;line-height:1.6}
+      .voc-topup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .voc-topup-pack{padding:10px;border-radius:9px;border:1px solid var(--line);background:var(--card2);display:grid;gap:3px}
+      .voc-topup-pack b{font-size:12px;color:var(--tx)}
+      .voc-topup-pack span{font-size:11px;color:var(--mut)}
       @media(max-width:480px){
         .voc-ai-plan-note{display:block}
         .voc-ai-plan-note span{display:block;text-align:left;margin-top:5px}
@@ -52,9 +59,11 @@
     note.className = 'voc-ai-plan-note';
     note.dataset.vocSubscriptionNote = '1';
     if (plan === 'pro') {
-      note.innerHTML = '<strong>Pro AI</strong><span>300 credits / month · AI Search uses 1 credit per word or phrase</span>';
+      note.innerHTML = '<strong>Pro Lifetime</strong><span>300 AI Credits / month · your existing lifetime plan is preserved</span>';
+    } else if (plan === 'pro_monthly') {
+      note.innerHTML = '<strong>Pro Monthly</strong><span>750 AI Credits / month · activation is pending billing launch</span>';
     } else {
-      note.innerHTML = '<strong>Free AI</strong><span>30 credits / month · AI Search uses 1 credit per word or phrase</span>';
+      note.innerHTML = '<strong>Free AI</strong><span>30 AI Credits / month · each new AI Search uses 1 credit</span>';
     }
     return note;
   }
@@ -65,7 +74,8 @@
 
     const planBadge = body.querySelector('.voc-auth-plan');
     if (!planBadge) return;
-    const plan = String(planBadge.textContent || '').trim().toLowerCase() === 'pro' ? 'pro' : 'free';
+    const planLabel = String(planBadge.textContent || '').trim().toLowerCase();
+    const plan = planLabel === 'pro lifetime' ? 'pro' : planLabel === 'pro monthly' ? 'pro_monthly' : 'free';
 
     if (!body.querySelector('[data-voc-subscription-note="1"]')) {
       const account = body.querySelector('.voc-auth-account');
@@ -76,26 +86,30 @@
     }
 
     const card = body.querySelector('.voc-auth-pro-card');
+    if (!body.querySelector('[data-voc-topups="1"]')) {
+      const packages = document.createElement('div');
+      packages.className = 'voc-topup-plans';
+      packages.dataset.vocTopups = '1';
+      packages.innerHTML = '<strong>Extra AI Credits · planned</strong><p>Optional credit packs after billing launches. Purchases are not enabled yet.</p><div class="voc-topup-grid"><div class="voc-topup-pack"><b>10 SAR</b><span>350 Credits</span></div><div class="voc-topup-pack"><b>20 SAR</b><span>800 Credits</span></div></div>';
+      const note = body.querySelector('[data-voc-subscription-note="1"]');
+      if (card) card.after(packages);
+      else if (note) note.after(packages);
+    }
     if (!card || card.dataset.vocSubscriptionReady === '1') return;
     card.dataset.vocSubscriptionReady = '1';
 
     const price = card.querySelector('.voc-auth-price');
-    if (price) price.textContent = '35 SAR · lifetime';
+    if (price) price.textContent = '15 SAR / month';
 
     const description = card.querySelector('p');
     if (description) {
-      description.textContent = 'One-time payment. 300 AI credits renew each month for the lifetime of VocLab while the service operates. To activate Pro, contact us on Instagram and send your VocLab account email.';
+      description.textContent = 'Planned: 750 AI Credits per month. Payment and monthly renewal are not active yet. Your current plan will not change automatically.';
     }
 
     const oldButton = card.querySelector('.voc-auth-primary');
     if (oldButton) {
-      const link = document.createElement('a');
-      link.className = `${oldButton.className} voc-subscribe-instagram`;
-      link.href = INSTAGRAM_URL;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'Contact @voclab_sa';
-      oldButton.replaceWith(link);
+      oldButton.disabled = true;
+      oldButton.textContent = 'Subscriptions coming soon';
     }
   }
 

@@ -217,7 +217,7 @@ function validateUploadedFile(filename, fileData, maxBytes = MAX_FILE_BYTES) {
   const name = typeof filename === 'string' ? filename : '';
   if (!name || name.length > 120 || /[\/\\\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/u.test(name) ||
       name.startsWith('.') || name.includes('..') ||
-      !/^[a-zA-Z0-9 _().-]+\.(pdf|docx|txt)$/i.test(name) ||
+      !/^[\p{L}\p{N} _()&,+-]+\.(pdf|docx|txt)$/iu.test(name) ||
       /\.(exe|php|js|html?|svg|bat|cmd|sh|ps1|msi|scr|com|pif|vbs|jar|dll)\./i.test(name)) {
     return { ok: false, status: 400, error: 'Invalid file name. Use safe letters and one PDF, DOCX or TXT extension.' };
   }

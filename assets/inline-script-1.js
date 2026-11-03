@@ -127,7 +127,7 @@ function unitLabel(u){if(u==='MY')return'Added Words';if(u[0]==='C')return deckN
 function rebuildUnits(){
   const src=fSrc.value;
   const units=[...new Set(allWords().filter(w=>src==='all'||w[0][0]===src).map(w=>w[0]))];
-  fUnit.innerHTML='<option value="all">All units</option>'+units.map(u=>`<option value="${u}">${htmlText(unitLabel(u))}</option>`).join('');
+  fUnit.innerHTML='<option value="all">All units</option>'+units.map(u=>`<option value="${htmlText(u)}">${htmlText(unitLabel(u))}</option>`).join('');
 }
 function pool(){
   const src=fSrc.value,u=fUnit.value,k=fKnown.value,q=fSearch.value.trim().toLowerCase();
@@ -267,7 +267,7 @@ function isManagedWord(w){return !!(w&&w[0]&&(w[0]==='MY'||String(w[0])[0]==='C'
 function selectionKey(w){return String(w[0])+'\u001f'+String(w[1]||'').toLowerCase()}
 function selHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function selectionDeckOptions(){
-  return `<option value="">Move to…</option><option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${d.id}">${selHtml(d.t)}</option>`).join('')}<option value="__new">＋ New deck…</option>`;
+  return `<option value="">Move to…</option><option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${selHtml(d.id)}">${selHtml(d.t)}</option>`).join('')}<option value="__new">＋ New deck…</option>`;
 }
 function selectionToolbarHTML(p){
   const manageable=p.filter(isManagedWord).length;
@@ -352,7 +352,7 @@ function wordRowHTML(w,i,base){
       <span class="m">${htmlText(w[3])}</span>
       <span class="u">${htmlText(unitLabel(w[0]))}</span>
       <button class="kbtn" onclick="toggleKnown('${esc(id)}')">${isK?'✓ Mastered':'Mark'}</button>
-      ${managed&&!selectMode?`<button class="delbtn" onclick="delMy('${esc(w[1])}','${w[0]}')">✕</button>`:''}
+      ${managed&&!selectMode?`<button class="delbtn" onclick="delMy('${esc(w[1])}','${esc(w[0])}')">✕</button>`:''}
     </div>
     ${w[4]?`<div class="ex"><button class="spk" onclick="speak('${esc(w[4])}')" title="Speak sentence">${SPK}</button> ${hiWord(w[4],w[1])}</div>`:``}
   </div>`;
@@ -618,7 +618,7 @@ function checkType(){
 // VOC_AI_DETAILS_V2
 let aiDraft=[],aiNotice='';
 function aiSafe(v){return String(v==null?'':v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
-function aiDeckOptions(){return `<option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${d.id}">${aiSafe(d.t)}</option>`).join('')}`}
+function aiDeckOptions(){return `<option value="MY">Added Words</option>${myDecks.map(d=>`<option value="${aiSafe(d.id)}">${aiSafe(d.t)}</option>`).join('')}`}
 function aiSetBusy(on,text){
   const b=document.getElementById('aiWordBtn'),m=document.getElementById('aiStatus');
   if(b){b.disabled=on;b.style.opacity=on?'.55':'1'}
@@ -1018,8 +1018,8 @@ function cardsHTML(edit){
   const html=allCards().filter(c=>!cardHidden(c.id)).map((c,i)=>{
     const cnt=cardCounts(c.id),tot=cnt[0],k=cnt[1];
     const isCustom=c.id[0]==='C';
-    const click=edit?'':((c.id==='MY'||isCustom)&&!tot?"goTab('my')":`pickCat('${c.id}')`);
-    const del=edit&&c.id!=='MY'?`<button class="delbadge" onclick="event.stopPropagation();${isCustom?`deleteDeck('${c.id}')`:`hideCard('${c.id}')`}">✕</button>`:'';
+    const click=edit?'':((c.id==='MY'||isCustom)&&!tot?"goTab('my')":`pickCat('${esc(c.id)}')`);
+    const del=edit&&c.id!=='MY'?`<button class="delbadge" onclick="event.stopPropagation();${isCustom?`deleteDeck('${esc(c.id)}')`:`hideCard('${esc(c.id)}')`}">✕</button>`:'';
     return `<div class="hcard${edit?' wig':''}" style="animation-delay:${i*60}ms" onclick="${click}">
       ${del}
       <span class="lvl ${c.cls}">${htmlText(c.badge)}</span><div class="ht">${htmlText(c.t)}</div><div class="hsub">${htmlText(c.sub)}</div>

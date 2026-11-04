@@ -41,7 +41,7 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   for(let i=0;i<30 && !get('vocImportPracticeOutput').querySelector('.voc-import-quiz');i++)await tick();
   assert.equal(modeCalls[1],'quiz');
   assert.ok(get('vocImportPracticeOutput').querySelector('.voc-import-quiz'));
-  assert.equal(window.document.querySelectorAll('.voc-flow-view').filter(x=>!x.hidden).length,1);
+  assert.equal([...window.document.querySelectorAll('.voc-flow-view')].filter(x=>!x.hidden).length,1);
   window.document.querySelector('[data-stage="saved"]').click();
   assert.equal(window.document.querySelector('#p-files').dataset.flowStage,'saved');
   assert.ok(get('vocImportSavedQuizzes').querySelector('button'));

@@ -497,7 +497,7 @@ END UNTRUSTED DOCUMENT CONTENT`
     const words = mode === 'file' ? verifiedFileWords(parsed.words, fileMeta?.source_text || '') : mode === 'word' ? cleanWords(parsed.words, 1) : [];
     const questions = mode === 'quiz' ? validateGeneratedQuiz(parsed.questions, quizConfig) : [];
     if (mode === 'quiz' && questions.length < Math.min(quizConfig.count, 3)) return res.status(502).json({error:'AI did not return enough valid quiz questions. Please retry.',code:'QUIZ_INVALID_RESPONSE'});
-    if (!words.length && mode !== 'file') {
+    if (!words.length && mode === 'word') {
       return res.status(422).json({ error: 'Could not build this vocabulary entry.', code: 'VOCABULARY_BUILD_FAILED' });
     }
 

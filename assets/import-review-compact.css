@@ -1,0 +1,27 @@
+/* VOC LAB · Compact Import Review
+   A vocabulary row should be readable at a glance on iPhone and desktop. */
+#p-files #vocImportResults .myform{max-width:820px!important}
+#p-files #vocImportRows{gap:9px!important}
+#p-files #vocImportRows .voc-review-word{display:flex;align-items:flex-start;gap:12px;padding:14px 15px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:var(--card)!important;min-height:0!important;cursor:default!important}
+#p-files #vocImportRows .voc-review-word>input[type=checkbox]{width:17px;height:17px;margin:6px 0 0;flex:0 0 auto;accent-color:var(--amber);cursor:pointer}
+#p-files #vocImportRows .voc-review-content{min-width:0;flex:1}
+#p-files #vocImportRows .voc-review-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+#p-files #vocImportRows .voc-review-name{display:flex;align-items:baseline;gap:8px;min-width:0}
+#p-files #vocImportRows .voc-review-name strong{font-family:var(--en)!important;font-size:21px!important;font-weight:600!important;text-transform:none!important;letter-spacing:-.02em!important;line-height:1.25!important;overflow-wrap:anywhere}
+#p-files #vocImportRows .voc-review-name span{font-size:11px!important;color:var(--mut)!important;white-space:nowrap}
+#p-files #vocImportRows .voc-review-content>p{line-height:1.55!important;margin:3px 0 0!important;max-width:680px}
+#p-files #vocImportRows .voc-review-more{margin-top:8px!important;border-top:1px solid var(--line);padding-top:7px}
+#p-files #vocImportRows .voc-review-more summary{font-size:11px!important;color:var(--mut)!important;cursor:pointer}
+#p-files #vocImportRows .voc-review-more p{font-size:11px!important;line-height:1.5!important;overflow-wrap:anywhere}
+#p-files #vocImportRows .voc-review-word-audio .voc-import-audio{margin:0!important;display:flex;gap:5px;flex-wrap:nowrap}
+#p-files #vocImportRows .voc-import-audio-button{min-height:32px!important;min-width:42px!important;padding:5px 8px!important;font-size:11px!important;border-radius:7px!important;white-space:nowrap;box-shadow:none!important}
+#p-files #vocImportRows .voc-review-more .voc-import-audio{display:flex;gap:5px;margin-top:8px}
+#p-files #vocImportRows .voc-review-more .voc-import-audio:before{content:'Example';align-self:center;margin-right:7px;color:var(--mut);font-size:11px}
+#p-files #vocImportResults h3{font-size:22px!important;line-height:1.25!important;letter-spacing:-.02em!important;text-transform:none!important}
+@media(max-width:540px){
+  #p-files #vocImportRows .voc-review-word{padding:12px 10px!important;gap:9px}
+  #p-files #vocImportRows .voc-review-head{gap:6px}
+  #p-files #vocImportRows .voc-review-name strong{font-size:19px!important}
+  #p-files #vocImportRows .voc-import-audio-button{min-width:39px!important;padding:5px 6px!important}
+  #p-files #vocImportRows .voc-review-content>p{font-size:12px!important}
+}

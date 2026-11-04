@@ -176,6 +176,10 @@
     #vocImportRows strong{font-size:18px!important;letter-spacing:0!important;text-transform:none!important}
     #vocImportRows p{line-height:1.5;margin:4px 0!important}
     #vocImportRows details{margin-top:4px!important}
+    .voc-import-audio{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 3px}
+    .voc-import-audio-button{min-height:38px;border-radius:8px;padding:8px 12px;background:var(--card2);color:var(--tx);border:1px solid var(--line);font:600 12px var(--ui);cursor:pointer}
+    .voc-import-audio-button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+    .voc-import-audio-button:hover{border-color:var(--amber)}
     .voc-review-pagination{display:flex;justify-content:space-between;align-items:center;gap:7px;margin:14px 0}
     .voc-review-pagination span{color:var(--mut);font-size:11px}
     #vocImportRows{max-height:none!important;overflow:visible!important}
@@ -250,6 +254,47 @@
   function intent() {
     return document.querySelector('input[name="vocImportIntent"]:checked')?.value || 'quiz';
   }
+
+  function pronounce(text, locale='en-US') {
+    const phrase=String(text||'').trim();
+    if (!phrase) return false;
+    // Reuse the application's existing speech engine; it selects US/UK voices.
+    if (typeof window.speak === 'function') {
+      window.speak(phrase,locale);
+      return true;
+    }
+    if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') return false;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance=new window.SpeechSynthesisUtterance(phrase);
+      utterance.lang=locale;
+      utterance.rate=.88;
+      window.speechSynthesis.speak(utterance);
+      return true;
+    } catch {return false;}
+  }
+  function addAudioControls(container,phrase,description) {
+    if(!String(phrase||'').trim())return;
+    const controls=document.createElement('div');
+    controls.className='voc-import-audio';
+    [['en-US','US'],['en-GB','UK']].forEach(([locale,label])=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='voc-import-audio-button';
+      button.setAttribute('aria-label','Listen to '+description+' in '+(locale==='en-US'?'American':'British')+' English');
+      button.title='Play '+label+' pronunciation';
+      button.textContent='🔊 '+label;
+      button.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation(); // Buttons sit inside word-selection labels.
+        const ok=pronounce(phrase,locale);
+        if(!ok)button.title='Speech is not available in this browser';
+      });
+      controls.appendChild(button);
+    });
+    container.appendChild(controls);
+  }
+
   function selection() { return entries.filter(x => selected.has(x.word.toLowerCase())); }
   function updateCount() {
     const count = get('vocImportSelectedCount');
@@ -310,6 +355,9 @@
         '<p style="font-size:11px;margin-top:5px">' + html(w.source_excerpt || '') + '</p>' +
         '<p style="font-size:11px;color:var(--mut)">' + html(w.ipa) + '</p></details>';
       row.append(check, detail);
+      // Accessible audio controls do not change the selected-checkbox state.
+      addAudioControls(detail,w.word,'word '+w.word);
+      if(w.example)addAudioControls(detail,w.example,'example for '+w.word);
       list.appendChild(row);
       });
       pager.replaceChildren();
@@ -456,7 +504,10 @@
       const meaning=document.createElement('p');meaning.textContent=w.arabic||'';meaning.dir='rtl';meaning.style.textAlign='left';
       const def=document.createElement('p');def.textContent=w.english_definition||'';
       const ex=document.createElement('p');ex.textContent=w.example||'';ex.style.cssText='font-size:12px;color:var(--mut);margin-top:8px';
-      card.append(term,meaning,def,ex);practiceOutput.appendChild(card);
+      card.append(term,meaning,def,ex);
+      addAudioControls(card,w.word,'word '+w.word);
+      if(w.example)addAudioControls(card,w.example,'example for '+w.word);
+      practiceOutput.appendChild(card);
     }
     practiceStatus.textContent=words.length+' words ready';
     currentQuiz=null;showScreen('practice');

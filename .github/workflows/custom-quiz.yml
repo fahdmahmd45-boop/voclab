@@ -1,0 +1,18 @@
+name: Custom quiz checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quiz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts
+      - run: node --test tests/custom-quiz.test.js
+      - run: node --check api/ai.js
+      - run: node --check assets/import-learn.js

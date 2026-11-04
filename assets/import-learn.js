@@ -13,7 +13,20 @@
   let entries = [];
   let selected = new Set();
   let working = false;
-  let lastIntent = 'explain';
+  let lastIntent = 'quiz';
+  let quizBusy = false;
+  let lastQuiz = null;
+  let currentQuiz = null;
+  const quizLevels = ['A1','A2','B1','B2','C1','C2','Auto'];
+  const quizKinds = [
+    ['mixed','Mixed Quiz','اختبار متنوع'],
+    ['mcq','Multiple Choice','اختيار من متعدد'],
+    ['blank','Fill in the Blanks','إكمال الفراغات'],
+    ['context','Meaning in Context','المعنى من السياق'],
+    ['spelling','Spelling Test','اختبار الإملاء'],
+    ['tf','True / False','صح أو خطأ'],
+    ['writing','Sentence Writing','تكوين جمل']
+  ];
   let lastFile = '';
   let savedDeckId = '';
   let progressTimer = null;
@@ -30,12 +43,29 @@
     '<p style="font-size:12px;color:var(--mut);margin:8px 0 16px">PDF, DOCX, TXT · Up to 2.5 MB · Scanned PDF images need selectable text</p>' +
     '<label style="display:block;font-weight:600;margin-bottom:8px">2 · What would you like to do?</label>' +
     '<div id="vocImportIntents" role="radiogroup" aria-label="Choose learning action" style="display:grid;gap:8px"></div>' +
-    '<label for="vocImportFocus" style="display:block;font-weight:600;margin:17px 0 8px">3 · Which words should AI select?</label>' +
+
+    '<label for="vocImportInstructions" style="display:block;font-weight:600;margin:17px 0 8px">3 · Tell VocLab what you want</label>' +
+    '<textarea id="vocImportInstructions" class="myin" rows="4" maxlength="600" style="width:100%;resize:vertical;min-height:98px" placeholder="e.g. Extract only the target words and create a B2 quiz with realistic sentences and useful feedback."></textarea>' +
+    '<p style="font-size:11px;color:var(--mut);margin-top:7px">Optional · Write in Arabic or English · Up to 600 characters</p>' +
+    '<div class="voc-import-presets" style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 6px">' +
+    '<button type="button" class="kbtn" data-preset="b2">B2 Quiz</button>' +
+    '<button type="button" class="kbtn" data-preset="arabic">Arabic Explanation</button>' +
+    '<button type="button" class="kbtn" data-preset="mistakes">Mistake Review</button></div>' +
+    '<div id="vocImportQuizSettings" style="margin-top:17px">' +
+    '<label style="display:block;font-weight:600;margin-bottom:9px">4 · Choose your English level</label>' +
+    '<div id="vocImportLevels" class="voc-import-levels" role="group" aria-label="English level"></div>' +
+    '<label style="display:block;font-weight:600;margin:18px 0 9px">5 · Quiz Type · نوع الاختبار</label>' +
+    '<div id="vocImportTypes" class="voc-import-types" role="group" aria-label="Quiz type"></div>' +
+    '<label for="vocImportCount" style="display:block;font-weight:600;margin:18px 0 8px">6 · Number of questions</label>' +
+    '<select id="vocImportCount" class="myin" style="width:100%"><option value="10">10 questions</option><option value="20" selected>20 questions</option><option value="30">30 questions</option><option value="40">40 questions</option></select>' +
+    '<label style="display:flex;align-items:center;gap:9px;margin-top:12px;font-size:12px"><input id="vocImportFeedback" type="checkbox" checked> Explain answers & review mistakes</label>' +
+    '</div>' +
+    '<label for="vocImportFocus" style="display:block;font-weight:600;margin:17px 0 8px">7 · Which words should AI select?</label>' +
     '<select id="vocImportFocus" class="myin" style="width:100%">' +
     '<option value="auto">Auto-detect the intended vocabulary</option>' +
     '<option value="listed">Only vocabulary lists and defined terms</option>' +
     '<option value="questions">Only vocabulary targeted by questions</option></select>' +
-    '<p style="color:var(--mut);font-size:12px;margin:10px 0 14px">AI analysis costs 5 credits per request. No charge just to choose a file. Results are reviewed before saving or starting a quiz.</p>' +
+    '<div class="voc-import-cost" style="margin:13px 0"><strong>Step 1 · Extract words: 5 AI credits</strong><span>Step 2 · Generate custom quiz: 5 more credits, after you approve the words.</span></div>' +
     '<button class="next" id="vocImportAnalyze" type="button">Analyze vocabulary · 5 credits</button>' +
     '<div id="vocImportProgress" hidden class="voc-import-progress" role="group" aria-label="File analysis progress">' +
     '<div class="voc-import-progress-head"><strong id="vocImportProgressPhase">Preparing your file…</strong><span id="vocImportProgressPercent">0%</span></div>' +
@@ -43,7 +73,7 @@
     '<div class="voc-import-progress-foot"><span id="vocImportProgressTime">00:00 elapsed</span><span id="vocImportProgressHint">Estimated progress · actual processing time varies</span></div>' +
     '</div>' +
     '<p id="vocImportStatus" role="status" aria-live="polite" style="font-size:13px;color:var(--mut);margin-top:12px"></p>' +
-    '</div><div id="vocImportResults"></div></div>';
+    '</div><div id="vocImportResults"></div><div id="vocImportSavedQuizzes"></div></div>';
   const get = id => document.getElementById(id);
   const intents = get('vocImportIntents');
   const status = get('vocImportStatus');
@@ -53,6 +83,25 @@
   const css = document.createElement('style');
   css.id = 'vocImportProgressStyles';
   css.textContent = `
+
+    #p-files>.home{display:block!important;margin:0 auto;max-width:800px!important}
+    .voc-import-levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .voc-import-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .voc-import-choice{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--tx);padding:12px 10px;min-height:48px;border-radius:9px;font-size:12px;font-family:inherit;line-height:1.4;text-align:center}
+    .voc-import-choice[aria-pressed="true"]{background:color-mix(in srgb,var(--amber) 12%,var(--card));border:2px solid var(--amber);font-weight:700}
+    .voc-import-cost{background:var(--card2);padding:13px 14px;border:1px solid var(--line);border-radius:9px;display:grid;gap:4px}
+    .voc-import-cost strong{font-size:12px}.voc-import-cost span{font-size:11px;color:var(--mut)}
+    .voc-import-quiz{margin-top:22px;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;display:grid;gap:17px}
+    .voc-import-quiz h3{font-family:var(--en);font-size:23px;line-height:1.35}
+    .voc-import-quiz-top{display:flex;justify-content:space-between;gap:12px;color:var(--mut);font-size:12px}
+    .voc-import-responses{display:grid;gap:9px}
+    .voc-import-answer{border:1px solid var(--line);background:var(--card2);text-align:left;color:var(--tx);border-radius:8px;padding:13px;min-height:42px;cursor:pointer;font:inherit;font-size:13px}
+    .voc-import-answer[aria-pressed="true"]{border:2px solid var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--card))}
+    .voc-import-feedback{font-size:13px;line-height:1.7}.voc-import-feedback:empty{display:none}.voc-import-feedback p{margin-top:6px;color:var(--mut)}
+    .voc-import-saved{display:block;width:100%;text-align:left;padding:13px;background:var(--card);border:1px solid var(--line);border-radius:9px;color:var(--tx);cursor:pointer;font-family:inherit;font-size:12px}
+    .voc-import-saved:hover{border-color:var(--amber)}
+    .voc-import-summary{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:9px}
+    @media(max-width:540px){.voc-import-levels{grid-template-columns:repeat(3,minmax(0,1fr))}.voc-import-types{grid-template-columns:1fr 1fr}.voc-import-choice{padding:11px 6px;font-size:11px}.voc-import-quiz{padding:15px}}
     .voc-import-progress{margin-top:18px;padding:16px;border:1px solid var(--line);background:var(--card);border-radius:15px}
     .voc-import-progress[hidden]{display:none!important}
     .voc-import-progress-head,.voc-import-progress-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -112,14 +161,14 @@
     input.type = 'radio';
     input.name = 'vocImportIntent';
     input.value = item[0];
-    input.checked = i === 0;
+    input.checked = item[0] === 'quiz';
     const content = document.createElement('span');
     content.innerHTML = '<strong style="display:block;font-size:13px">' + html(item[1]) + '</strong><small style="color:var(--mut)">' + html(item[2]) + '</small>';
     label.append(input, content);
     intents.appendChild(label);
   });
   function intent() {
-    return document.querySelector('input[name="vocImportIntent"]:checked')?.value || 'explain';
+    return document.querySelector('input[name="vocImportIntent"]:checked')?.value || 'quiz';
   }
   function selection() { return entries.filter(x => selected.has(x.word.toLowerCase())); }
   function updateCount() {
@@ -146,7 +195,8 @@
       '<div id="vocImportRows" style="display:grid;gap:9px;max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:17px">' +
       '<button class="next" style="width:auto;margin:0;flex:1" id="vocImportSave" type="button">Add selected to Deck</button>' +
-      '<button class="kbtn" id="vocImportQuiz" type="button" style="flex:1">Create Quiz</button></div>' +
+      '<button class="kbtn" id="vocImportQuiz" type="button" style="flex:1">Generate custom Quiz · 5 credits</button></div>' +
+      '<div id="vocImportQuizOutput"></div>' +
       '<p id="vocImportSaveStatus" role="status" style="font-size:12px;color:var(--mut);margin-top:10px">The selected words are not saved yet.</p>';
     result.replaceChildren(review);
     const list = get('vocImportRows');
@@ -206,20 +256,254 @@
       return true;
     }
     get('vocImportSave').onclick = save;
-    get('vocImportQuiz').onclick = () => {
-      if (!save()) return;
-      fSrc.value = 'C';
-      picked = true;
-      rebuildUnits();
-      fUnit.value = savedDeckId;
-      document.querySelector('.tab[data-p="mcq"]')?.click();
+    get('vocImportQuiz').onclick = generateQuiz;
+    if (lastIntent !== 'quiz') {
+      get('vocImportQuiz').textContent = 'Generate Quiz · 5 credits';
+    }
+  }
+
+  function quizConfig() {
+    return {
+      level: get('vocImportLevels').querySelector('[aria-pressed="true"]')?.dataset.level || 'B2',
+      quizType: get('vocImportTypes').querySelector('[aria-pressed="true"]')?.dataset.kind || 'mixed',
+      questionCount: Number(get('vocImportCount').value),
+      instructions: get('vocImportInstructions').value.trim().slice(0,600)
     };
   }
+  function createChoice(parent, label, attr, value, initial) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'voc-import-choice';
+    btn.textContent = label;
+    btn.dataset[attr] = value;
+    btn.setAttribute('aria-pressed', String(value === initial));
+    btn.addEventListener('click', () => {
+      parent.querySelectorAll('[aria-pressed]').forEach(el => el.setAttribute('aria-pressed', String(el === btn)));
+    });
+    parent.appendChild(btn);
+    return btn;
+  }
+  const levels = get('vocImportLevels');
+  quizLevels.forEach(l => createChoice(levels, l === 'Auto' ? 'Auto · Match my file' : l, 'level', l, 'B2'));
+  const kinds = get('vocImportTypes');
+  quizKinds.forEach(k => createChoice(kinds, k[1] + ' · ' + k[2], 'kind', k[0], 'mixed'));
+  function switchGoal() {
+    const isQuiz = intent() === 'quiz';
+    get('vocImportQuizSettings').hidden = !isQuiz;
+    get('vocImportQuizSettings').style.display = isQuiz ? '' : 'none';
+  }
+  intents.addEventListener('change', switchGoal);
+  switchGoal();
+  document.querySelectorAll('[data-preset]').forEach(button => {
+    button.addEventListener('click', () => {
+      const preset = button.dataset.preset;
+      const target = preset === 'arabic' ? 'explain' : 'quiz';
+      const radio = document.querySelector('input[name="vocImportIntent"][value="'+target+'"]');
+      if (radio) radio.checked = true;
+      switchGoal();
+      if (preset === 'b2') {
+        levels.querySelector('[data-level="B2"]')?.click();
+        kinds.querySelector('[data-kind="mixed"]')?.click();
+        get('vocImportInstructions').value = 'Create a useful B2 quiz from the target words in my file, with realistic sentences and clear feedback.';
+      } else if (preset === 'arabic') {
+        get('vocImportInstructions').value = 'اشرح الكلمات الأساسية بالعربي مع المعنى، والتعريف الإنجليزي، والنطق، والأمثلة.';
+      } else {
+        get('vocImportInstructions').value = 'اختبرني في كلمات الملف وراجع معي الكلمات التي أخطئ فيها بأسئلة جديدة.';
+      }
+    });
+  });
+  function showSavedQuizzes() {
+    const area = get('vocImportSavedQuizzes');
+    if (!area) return;
+    area.replaceChildren();
+    let quizzes = [];
+    try {const raw = JSON.parse(localStorage.getItem('engl01_import_quizzes') || '[]');quizzes = Array.isArray(raw) ? raw.slice(0,3) : [];} catch {}
+    if (!quizzes.length) return;
+    const heading = document.createElement('h3');
+    heading.textContent = 'Saved practice · No extra AI credits';
+    heading.style.cssText='font-size:15px;margin:20px 0 9px';
+    const items = document.createElement('div');
+    items.style.cssText='display:grid;gap:8px';
+    quizzes.forEach(quiz => {
+      if (!Array.isArray(quiz.questions) || !quiz.questions.length) return;
+      const line = document.createElement('button');
+      line.type='button';
+      line.className='voc-import-saved';
+      line.textContent = (quiz.file || 'Imported vocabulary') + ' · ' +
+        (quiz.level || 'B2') + ' · ' + quiz.questions.length + ' questions · Replay';
+      line.addEventListener('click', () => renderQuiz(quiz));
+      items.appendChild(line);
+    });
+    area.append(heading,items);
+  }
+  function saveQuiz(quiz) {
+    try {
+      const existing = JSON.parse(localStorage.getItem('engl01_import_quizzes') || '[]');
+      const all = Array.isArray(existing) ? existing : [];
+      all.unshift(quiz);
+      localStorage.setItem('engl01_import_quizzes', JSON.stringify(all.slice(0,3)));
+      showSavedQuizzes();
+    } catch (error) { console.warn('Could not save quiz locally', error); }
+  }
+  function renderQuiz(quiz) {
+    currentQuiz = quiz;
+    const target = get('vocImportQuizOutput') || result;
+    const questions = quiz.questions;
+    const answers = new Array(questions.length).fill('');
+    let current = 0, checked = false, correct = 0, misses = [];
+    target.replaceChildren();
+    const shell = document.createElement('section');
+    shell.className = 'voc-import-quiz';
+    target.appendChild(shell);
+    const btn = (label, action, kind) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = kind || 'kbtn';
+      b.textContent = label;
+      b.addEventListener('click', action);
+      return b;
+    };
+    function show() {
+      shell.replaceChildren();
+      if (current >= questions.length) {
+        const headline = document.createElement('h3');
+        headline.textContent = 'Practice complete';
+        const summary = document.createElement('p');
+        summary.textContent = correct + ' of ' + questions.length + ' answers matched the expected answer. Writing questions need self-review.';
+        shell.append(headline, summary);
+        if (misses.length) {
+          const list = document.createElement('div');
+          list.className = 'voc-import-summary';
+          const h = document.createElement('h4');
+          h.textContent = 'Words to review';
+          list.append(h);
+          misses.forEach(i => {
+            const item = document.createElement('p');
+            item.textContent = questions[i].word + ' · ' + questions[i].explanation;
+            list.append(item);
+          });
+          shell.append(list);
+        }
+        shell.append(btn('Try quiz again · no AI credits', () => {current=0;checked=false;correct=0;misses=[];answers.fill('');show();}, 'next'));
+        shell.append(btn('Back to selected words', () => {target.replaceChildren();showResults({document_type:'mixed'});}));
+        return;
+      }
+      const q = questions[current];
+      const head = document.createElement('div');
+      head.className = 'voc-import-quiz-top';
+      const a = document.createElement('strong');
+      a.textContent = 'Question ' + (current + 1) + ' / ' + questions.length;
+      const b = document.createElement('span');
+      b.textContent = q.kind.toUpperCase() + ' · ' + quiz.level;
+      head.append(a,b);
+      const title = document.createElement('h3');
+      title.textContent = q.prompt;
+      shell.append(head,title);
+      const responses = document.createElement('div');
+      responses.className = 'voc-import-responses';
+      let input;
+      if (q.options.length) {
+        q.options.forEach(opt => {
+          const option = btn(opt, () => {
+            if (checked) return;
+            answers[current] = opt;
+            responses.querySelectorAll('button').forEach(el => el.setAttribute('aria-pressed', String(el===option)));
+          }, 'voc-import-answer');
+          option.setAttribute('aria-pressed', String(answers[current] === opt));
+          responses.appendChild(option);
+        });
+      } else {
+        input = q.kind === 'writing' ? document.createElement('textarea') : document.createElement('input');
+        input.className='myin';
+        input.style.width='100%';
+        input.placeholder = q.kind === 'writing' ? 'Write your own sentence using '+q.word : 'Type your answer';
+        input.value = answers[current] || '';
+        input.maxLength = 350;
+        input.addEventListener('input', () => {answers[current] = input.value});
+        responses.appendChild(input);
+      }
+      shell.appendChild(responses);
+      const feedback = document.createElement('div');
+      feedback.className = 'voc-import-feedback';
+      const next = btn('Check answer', () => {
+        const value = String(answers[current] || '').trim();
+        if (!value) {feedback.textContent = 'Choose or type an answer first.';return}
+        if (!checked) {
+          checked = true;
+          const normalized = s => String(s).trim().toLowerCase().replace(/[.!?]+$/, '');
+          const match = normalized(value) === normalized(q.answer);
+          if (match) correct++;
+          else if (q.kind !== 'writing') misses.push(current);
+          feedback.replaceChildren();
+          const resultText = document.createElement('strong');
+          resultText.textContent = q.kind === 'writing' ? 'Compare your writing with this example:' : match ? 'Correct ✓' : 'Review this answer';
+          const answerText = document.createElement('p');
+          answerText.textContent = 'Expected: ' + q.answer;
+          const why = document.createElement('p');
+          why.textContent = q.explanation;
+          feedback.append(resultText,answerText,why);
+          if (q.kind === 'writing') {
+            const review = btn('Mark for review', () => { if(!misses.includes(current)) misses.push(current); review.disabled=true; review.textContent='Added to review';});
+            feedback.append(review);
+          }
+          next.textContent = current === questions.length-1 ? 'View results' : 'Next question';
+          if (input) input.disabled = true;
+        } else {
+          current++; checked=false; show();
+        }
+      },'next');
+      shell.append(feedback,next);
+    }
+    show();
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  async function generateQuiz() {
+    if (working || quizBusy) return;
+    const selectedWords = selection();
+    const message = get('vocImportSaveStatus');
+    if (!selectedWords.length) {message.textContent='Select at least one word first.';return}
+    const config = quizConfig();
+    const button = get('vocImportQuiz');
+    quizBusy=true;
+    button.disabled=true;
+    button.textContent='Generating questions…';
+    message.textContent='Generating a ' + config.level + ' quiz · 5 AI credits. Do not close this page.';
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(),85000);
+      let response;
+      try {
+        response = await fetch('/api/ai',{method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({mode:'quiz',words:selectedWords.map(w=>({
+            word:w.word,arabic:w.arabic,english_definition:w.english_definition,example:w.example
+          })),...config}),
+          signal:controller.signal});
+      } finally {clearTimeout(timeout)}
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(payload.error || 'Could not generate quiz.');
+      if(!Array.isArray(payload.questions) || !payload.questions.length) throw new Error('No valid questions were returned.');
+      lastQuiz = {id:Date.now(),file:lastFile,level:config.level,type:config.quizType,
+        questions:payload.questions,date:new Date().toISOString()};
+      saveQuiz(lastQuiz);
+      message.textContent = payload.questions.length + ' questions ready · Saved for replay without AI credits.';
+      renderQuiz(lastQuiz);
+    } catch(error) {
+      message.textContent=error.name==='AbortError'?'Quiz generation timed out. Try fewer questions.':String(error.message || error);
+    } finally {
+      quizBusy=false;
+      button.disabled=false;
+      button.textContent='Generate custom Quiz · 5 credits';
+    }
+  }
+
+  showSavedQuizzes();
   get('vocImportFile').addEventListener('change', () => {
     if (working) return;
     entries=[];selected.clear();result.innerHTML='';
     progress.hidden = true;
     status.textContent='Choose what to study, then analyze your file.';
+    currentQuiz = null;
   });
   analyze.addEventListener('click', async () => {
     if (working) return;
@@ -229,11 +513,13 @@
     if (file.size > 2500000) { status.textContent='Maximum file size is 2.5 MB.'; return; }
     const chosenIntent = intent();
     const chosenFocus = get('vocImportFocus').value;
+    const chosenInstructions = get('vocImportInstructions').value.trim().slice(0,600);
     working = true;
     analyze.disabled = true;
     lastIntent = chosenIntent;
     lastFile = file.name;
     savedDeckId = '';
+    currentQuiz = null;
     entries = [];
     selected.clear();
     result.innerHTML = '';
@@ -252,7 +538,7 @@
       try {
         response = await fetch('/api/ai', {
           method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({mode:'file',intent:chosenIntent,focus:chosenFocus,filename:file.name,fileData:dataUrl}),
+          body:JSON.stringify({mode:'file',intent:chosenIntent,focus:chosenFocus,instructions:chosenInstructions,filename:file.name,fileData:dataUrl}),
           signal:controller.signal
         });
       } finally { clearTimeout(timeout); }

@@ -75,6 +75,66 @@
     '<p id="vocImportStatus" role="status" aria-live="polite" style="font-size:13px;color:var(--mut);margin-top:12px"></p>' +
     '</div><div id="vocImportResults"></div><div id="vocImportSavedQuizzes"></div></div>';
   const get = id => document.getElementById(id);
+  // Each step is its own view. Never stack review, quiz and saved sessions.
+  const root=panel.querySelector('.home');
+  const screens={};
+  const nav=document.createElement('nav');
+  nav.className='voc-flow-nav';
+  nav.setAttribute('aria-label','Import & Learn stages');
+  const navButtons={};
+  [['setup','Set up'],['review','Review words'],['practice','Practice'],['saved','Saved']].forEach(([id,title],i)=>{
+    const b=document.createElement('button');
+    b.type='button';b.textContent=(i<3?i+1+' · ':'')+title;b.dataset.stage=id;
+    b.onclick=()=>{if(id==='review'&&!entries.length)return;if(id==='practice'&&!currentQuiz&&!practiceOutput.children.length)return;showScreen(id)};
+    navButtons[id]=b;nav.appendChild(b);
+  });
+  root.prepend(nav);
+  for(const id of ['setup','review','practice','saved']){
+    const section=document.createElement('section');
+    section.className='voc-flow-view';section.hidden=true;
+    root.appendChild(section);screens[id]=section;
+  }
+  [...root.children].filter(n=>n.classList?.contains('eyebrow')||n.classList?.contains('hgreet')||n.tagName==='P')
+    .forEach(n=>screens.setup.appendChild(n));
+  screens.setup.appendChild(root.querySelector('.myform'));
+  screens.review.appendChild(get('vocImportResults'));
+  screens.saved.appendChild(get('vocImportSavedQuizzes'));
+  const back=(caption,callback)=>{
+    const b=document.createElement('button');b.type='button';b.className='kbtn voc-flow-back';
+    b.textContent=caption;b.onclick=callback;return b;
+  };
+  screens.review.prepend(back('← Edit file and settings',()=>showScreen('setup')));
+  const practiceTitle=document.createElement('div');
+  practiceTitle.className='voc-flow-title';
+  practiceTitle.innerHTML='<div class="eyebrow">YOUR PRACTICE</div><h2>Study session</h2>';
+  screens.practice.appendChild(practiceTitle);
+  const practiceStatus=document.createElement('p');
+  practiceStatus.id='vocImportPracticeStatus';practiceStatus.setAttribute('role','status');
+  practiceStatus.setAttribute('aria-live','polite');
+  screens.practice.appendChild(practiceStatus);
+  const practiceOutput=document.createElement('div');
+  practiceOutput.id='vocImportPracticeOutput';screens.practice.appendChild(practiceOutput);
+  screens.practice.appendChild(back('← Back to selected words',()=>showScreen('review')));
+  const savedTitle=document.createElement('div');
+  savedTitle.className='voc-flow-title';
+  savedTitle.innerHTML='<div class="eyebrow">SAVED PRACTICE</div><h2>Your quizzes.</h2><p>Replay without AI credits.</p>';
+  screens.saved.prepend(savedTitle);
+  screens.saved.appendChild(back('← New import',()=>showScreen('setup')));
+  function showScreen(id){
+    for(const [key,section] of Object.entries(screens))section.hidden=key!==id;
+    for(const [key,button] of Object.entries(navButtons)){
+      button.classList.toggle('active',key===id);
+      button.setAttribute('aria-current',key===id?'step':'false');
+      button.disabled=(key==='review'&&!entries.length)||(key==='practice'&&!currentQuiz&&!practiceOutput.children.length);
+    }
+    panel.dataset.flowStage=id;
+    requestAnimationFrame(()=>{
+      const header=document.querySelector('header');
+      const offset=header?header.getBoundingClientRect().height+16:16;
+      window.scrollTo({top:Math.max(0,root.getBoundingClientRect().top+window.scrollY-offset),behavior:'instant'});
+    });
+  }
+  showScreen('setup');
   const intents = get('vocImportIntents');
   const status = get('vocImportStatus');
   const result = get('vocImportResults');
@@ -102,6 +162,22 @@
     .voc-import-saved:hover{border-color:var(--amber)}
     .voc-import-summary{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:9px}
     @media(max-width:540px){.voc-import-levels{grid-template-columns:repeat(3,minmax(0,1fr))}.voc-import-types{grid-template-columns:1fr 1fr}.voc-import-choice{padding:11px 6px;font-size:11px}.voc-import-quiz{padding:15px}}
+    .voc-flow-view[hidden]{display:none!important}
+    .voc-flow-view{min-width:0;max-width:790px;margin-inline:auto;padding-bottom:calc(var(--voc-bottom-h,72px) + env(safe-area-inset-bottom) + 62px)}
+    .voc-flow-nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;padding:4px 0 14px;overflow:auto;scrollbar-width:none}
+    .voc-flow-nav button{flex:1 0 auto;min-height:38px;border:0;background:transparent;color:var(--mut);border-radius:7px;padding:8px;font:600 11px var(--ui);cursor:pointer;white-space:nowrap}
+    .voc-flow-nav button.active{background:var(--card2);color:var(--tx)}
+    .voc-flow-nav button:disabled{opacity:.35;cursor:not-allowed}
+    .voc-flow-back{margin:0 0 18px!important}
+    .voc-flow-title{margin:8px 0 20px}
+    .voc-flow-title h2{font:500 clamp(25px,4vw,35px)/1.2 var(--en);letter-spacing:-.025em;margin:8px 0}
+    .voc-flow-title p,#vocImportPracticeStatus{font-size:13px;color:var(--mut)}
+    .voc-review-pagination{display:flex;justify-content:space-between;align-items:center;gap:7px;margin:14px 0}
+    .voc-review-pagination span{color:var(--mut);font-size:11px}
+    #vocImportRows{max-height:none!important;overflow:visible!important}
+    #vocImportRows label{padding:11px!important;border-radius:9px!important}
+    @media(min-width:1024px){.voc-flow-view{padding-bottom:20px}}
+    @media(max-width:540px){.voc-flow-nav button{font-size:10px;padding:7px 5px}.voc-flow-view .myform{padding:14px!important}}
     .voc-import-progress{margin-top:18px;padding:16px;border:1px solid var(--line);background:var(--card);border-radius:15px}
     .voc-import-progress[hidden]{display:none!important}
     .voc-import-progress-head,.voc-import-progress-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -200,7 +276,12 @@
       '<p id="vocImportSaveStatus" role="status" style="font-size:12px;color:var(--mut);margin-top:10px">The selected words are not saved yet.</p>';
     result.replaceChildren(review);
     const list = get('vocImportRows');
-    entries.forEach((w, i) => {
+    const pager=document.createElement('div');pager.className='voc-review-pagination';list.after(pager);
+    let page=0;const pageSize=7;
+    function showPage(){
+      list.replaceChildren();
+      const start=page*pageSize;
+      entries.slice(start,start+pageSize).forEach((w,i)=>{
       const row = document.createElement('label');
       row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer';
       const check = document.createElement('input');
@@ -226,7 +307,16 @@
         '<p style="font-size:11px;color:var(--mut)">' + html(w.ipa) + '</p></details>';
       row.append(check, detail);
       list.appendChild(row);
-    });
+      });
+      pager.replaceChildren();
+      const prev=document.createElement('button');prev.className='kbtn';prev.textContent='← Prev';prev.disabled=page===0;
+      prev.onclick=()=>{page--;showPage();};
+      const span=document.createElement('span');span.textContent=(start+1)+'–'+Math.min(start+pageSize,entries.length)+' / '+entries.length;
+      const next=document.createElement('button');next.className='kbtn';next.textContent='Next →';next.disabled=start+pageSize>=entries.length;
+      next.onclick=()=>{page++;showPage();};
+      pager.append(prev,span,next);
+    }
+    showPage();
     get('vocImportAll').onclick = () => { selected = new Set(entries.map(w => w.word.toLowerCase())); list.querySelectorAll('input[type="checkbox"]').forEach(c => {c.checked=true});updateCount(); };
     get('vocImportNone').onclick = () => { selected.clear(); list.querySelectorAll('input[type="checkbox"]').forEach(c => {c.checked=false});updateCount(); };
     updateCount();
@@ -255,7 +345,12 @@
       message.textContent = saved + ' new words saved to ' + myDecks.find(d => d.id === savedDeckId)?.t + '. ' + (chosen.length-saved) + ' already in this deck.';
       return true;
     }
-    get('vocImportSave').onclick = save;
+    get('vocImportSave').onclick = ()=>{
+      if(!selection().length){get('vocImportSaveStatus').textContent='Select at least one word.';return}
+      if(lastIntent==='deck'&&!save())return;
+      renderStudy();
+    };
+    get('vocImportSave').textContent=lastIntent==='deck'?'Save selected to deck':'Study selected words';
     get('vocImportQuiz').onclick = generateQuiz;
     if (lastIntent !== 'quiz') {
       get('vocImportQuiz').textContent = 'Generate Quiz · 5 credits';
@@ -345,9 +440,29 @@
       showSavedQuizzes();
     } catch (error) { console.warn('Could not save quiz locally', error); }
   }
+
+  function renderStudy(){
+    const words=selection();
+    practiceOutput.replaceChildren();
+    const heading=document.createElement('h2');heading.textContent=lastIntent==='deck'?'Saved to your deck':'Study your selected words';
+    heading.style.cssText='font-size:24px;margin:0 0 12px';practiceOutput.appendChild(heading);
+    for(const w of words){
+      const card=document.createElement('article');card.className='myform';card.style.marginBottom='10px';
+      const term=document.createElement('h3');term.textContent=w.word;term.style.cssText='font-size:23px;font-family:var(--en)';
+      const meaning=document.createElement('p');meaning.textContent=w.arabic||'';meaning.dir='rtl';meaning.style.textAlign='left';
+      const def=document.createElement('p');def.textContent=w.english_definition||'';
+      const ex=document.createElement('p');ex.textContent=w.example||'';ex.style.cssText='font-size:12px;color:var(--mut);margin-top:8px';
+      card.append(term,meaning,def,ex);practiceOutput.appendChild(card);
+    }
+    practiceStatus.textContent=words.length+' words ready';
+    currentQuiz=null;showScreen('practice');
+  }
+
   function renderQuiz(quiz) {
     currentQuiz = quiz;
-    const target = get('vocImportQuizOutput') || result;
+    const target = practiceOutput;
+    practiceStatus.textContent='Ready · Replay without spending AI credits.';
+    showScreen('practice');
     const questions = quiz.questions;
     const answers = new Array(questions.length).fill('');
     let current = 0, checked = false, correct = 0, misses = [];
@@ -455,7 +570,7 @@
       shell.append(feedback,next);
     }
     show();
-    target.scrollIntoView({behavior:'smooth',block:'start'});
+    showScreen('practice');
   }
   async function generateQuiz() {
     if (working || quizBusy) return;
@@ -467,7 +582,10 @@
     quizBusy=true;
     button.disabled=true;
     button.textContent='Generating questions…';
-    message.textContent='Generating a ' + config.level + ' quiz · 5 AI credits. Do not close this page.';
+    message.textContent='Generating a '+config.level+' quiz · 5 AI credits.';
+    practiceOutput.replaceChildren();
+    practiceStatus.textContent='Generating '+config.questionCount+' questions at '+config.level+' level…';
+    showScreen('practice');
     try {
       const controller = new AbortController();
       const timeout = setTimeout(()=>controller.abort(),85000);
@@ -489,7 +607,8 @@
       message.textContent = payload.questions.length + ' questions ready · Saved for replay without AI credits.';
       renderQuiz(lastQuiz);
     } catch(error) {
-      message.textContent=error.name==='AbortError'?'Quiz generation timed out. Try fewer questions.':String(error.message || error);
+      practiceStatus.textContent=error.name==='AbortError'?'Quiz generation timed out. Try fewer questions.':String(error.message || error);
+      message.textContent=practiceStatus.textContent;
     } finally {
       quizBusy=false;
       button.disabled=false;
@@ -551,6 +670,7 @@
         (responseData.file_processing?.sampled ? ' Only selected portions of this long file could be analyzed.' : '') +
         ' Review your selection before saving.';
       showResults(responseData.file_processing);
+      showScreen('review');
     } catch(err) {
       endProgress(false);
       status.textContent = err.name === 'AbortError' ? 'Analysis timed out. Try a shorter file.' : String(err.message || err);

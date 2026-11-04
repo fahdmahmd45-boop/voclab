@@ -172,6 +172,10 @@
     .voc-flow-title{margin:8px 0 20px}
     .voc-flow-title h2{font:500 clamp(25px,4vw,35px)/1.2 var(--en);letter-spacing:-.025em;margin:8px 0}
     .voc-flow-title p,#vocImportPracticeStatus{font-size:13px;color:var(--mut)}
+    #vocImportResults h3{font-size:22px!important;letter-spacing:-.015em!important;text-transform:none!important;line-height:1.3!important}
+    #vocImportRows strong{font-size:18px!important;letter-spacing:0!important;text-transform:none!important}
+    #vocImportRows p{line-height:1.5;margin:4px 0!important}
+    #vocImportRows details{margin-top:4px!important}
     .voc-review-pagination{display:flex;justify-content:space-between;align-items:center;gap:7px;margin:14px 0}
     .voc-review-pagination span{color:var(--mut);font-size:11px}
     #vocImportRows{max-height:none!important;overflow:visible!important}
@@ -277,7 +281,7 @@
     result.replaceChildren(review);
     const list = get('vocImportRows');
     const pager=document.createElement('div');pager.className='voc-review-pagination';list.after(pager);
-    let page=0;const pageSize=7;
+    let page=0;const pageSize=5;
     function showPage(){
       list.replaceChildren();
       const start=page*pageSize;
@@ -500,7 +504,7 @@
           shell.append(list);
         }
         shell.append(btn('Try quiz again · no AI credits', () => {current=0;checked=false;correct=0;misses=[];answers.fill('');show();}, 'next'));
-        shell.append(btn('Back to selected words', () => {target.replaceChildren();showResults({document_type:'mixed'});}));
+        shell.append(btn('Back to selected words', () => {target.replaceChildren();showResults({document_type:'mixed'});showScreen('review');}));
         return;
       }
       const q = questions[current];

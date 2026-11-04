@@ -13,6 +13,8 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   });
   const {window}=dom;
   window.scrollTo=()=>{};
+  const audioCalls=[];
+  window.speak=(phrase,locale)=>audioCalls.push({phrase,locale});
   let modeCalls=[];
   window.fetch=async(_url,opts)=>{
     const body=JSON.parse(opts.body);
@@ -33,6 +35,19 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   assert.equal(window.document.querySelector('#p-files').dataset.flowStage,'review');
   assert.equal(modeCalls[0],'file');
   assert.equal(window.document.querySelectorAll('#vocImportRows label').length,5);
+  const firstRow=window.document.querySelector('#vocImportRows label');
+  const selectedBefore=firstRow.querySelector('input[type="checkbox"]').checked;
+  const wordAudio=firstRow.querySelectorAll('.voc-import-audio-button');
+  assert.equal(wordAudio.length,4,'US/UK buttons for word and example');
+  wordAudio[0].click();
+  wordAudio[1].click();
+  wordAudio[2].click();
+  assert.deepEqual(audioCalls.slice(0,3),[
+    {phrase:'Word1',locale:'en-US'},
+    {phrase:'Word1',locale:'en-GB'},
+    {phrase:'Example for Word1',locale:'en-US'}
+  ]);
+  assert.equal(firstRow.querySelector('input[type="checkbox"]').checked,selectedBefore,'audio must not toggle word selection');
   assert.equal(window.document.querySelector('#vocImportResults').parentElement,window.document.querySelectorAll('.voc-flow-view')[1]);
   window.document.querySelector('.voc-review-pagination button:last-child').click();
   assert.equal(window.document.querySelectorAll('#vocImportRows label').length,5);

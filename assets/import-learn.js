@@ -176,6 +176,14 @@
     #vocImportRows strong{font-size:18px!important;letter-spacing:0!important;text-transform:none!important}
     #vocImportRows p{line-height:1.5;margin:4px 0!important}
     #vocImportRows details{margin-top:4px!important}
+    .voc-quiz-progress{margin:14px 0 18px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+    .voc-quiz-progress-top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:11px}
+    .voc-quiz-progress-top strong{font-weight:600}
+    .voc-quiz-progress-top span{font-size:18px;font-variant-numeric:tabular-nums;color:var(--amber);font-weight:700}
+    .voc-quiz-progress-track{height:9px;border-radius:99px;background:var(--card2);border:1px solid var(--line);overflow:hidden}
+    .voc-quiz-progress-fill{height:100%;width:0%;background:var(--amber);border-radius:99px;transition:width .35s ease}
+    .voc-quiz-progress-foot{display:flex;justify-content:space-between;gap:10px;margin-top:10px;color:var(--mut);font-size:11px}
+    @media(prefers-reduced-motion:reduce){.voc-quiz-progress-fill{transition:none}}
     .voc-import-audio{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 3px}
     .voc-import-audio-button{min-height:38px;border-radius:8px;padding:8px 12px;background:var(--card2);color:var(--tx);border:1px solid var(--line);font:600 12px var(--ui);cursor:pointer}
     .voc-import-audio-button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
@@ -493,6 +501,68 @@
     } catch (error) { console.warn('Could not save quiz locally', error); }
   }
 
+  let quizProgressTimer=null;
+  let quizProgressBegin=0;
+  let quizProgressPercentage=0;
+  let quizProgressBox=null;
+  function createQuizProgress(title,label) {
+    const box=document.createElement('div');
+    box.className='voc-quiz-progress';
+    const top=document.createElement('div');top.className='voc-quiz-progress-top';
+    const name=document.createElement('strong');name.textContent=title;
+    const percent=document.createElement('span');percent.textContent='0%';
+    top.append(name,percent);
+    const track=document.createElement('div');track.className='voc-quiz-progress-track';
+    track.setAttribute('role','progressbar');track.setAttribute('aria-label',label);
+    track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');track.setAttribute('aria-valuenow','0');
+    const fill=document.createElement('div');fill.className='voc-quiz-progress-fill';track.append(fill);
+    const foot=document.createElement('div');foot.className='voc-quiz-progress-foot';
+    const elapsed=document.createElement('span');elapsed.textContent='00:00 elapsed';
+    const info=document.createElement('span');info.textContent='Estimated · waiting for AI';
+    foot.append(elapsed,info);
+    box.append(top,track,foot);
+    return {box,name,percent,track,fill,elapsed,info};
+  }
+  function setQuizProgress(value,seconds) {
+    if(!quizProgressBox)return;
+    quizProgressPercentage=Math.max(quizProgressPercentage,Math.max(0,Math.min(100,Math.round(value))));
+    quizProgressBox.percent.textContent=quizProgressPercentage+'%';
+    quizProgressBox.fill.style.width=quizProgressPercentage+'%';
+    quizProgressBox.track.setAttribute('aria-valuenow',String(quizProgressPercentage));
+    const sec=Math.floor(seconds);
+    quizProgressBox.elapsed.textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')+' elapsed';
+  }
+  function startQuizProgress(count,level) {
+    stopQuizProgress();
+    quizProgressPercentage=0;
+    quizProgressBegin=Date.now();
+    quizProgressBox=createQuizProgress('Preparing your '+level+' quiz','Estimated quiz generation progress');
+    practiceOutput.replaceChildren(quizProgressBox.box);
+    quizProgressBox.info.textContent=count+' questions · estimated progress';
+    setQuizProgress(0,0);
+    quizProgressTimer=setInterval(()=>{
+      const seconds=(Date.now()-quizProgressBegin)/1000;
+      const estimate=92*(1-Math.exp(-seconds/20));
+      setQuizProgress(Math.min(92,estimate),seconds);
+      if(seconds>40)quizProgressBox.name.textContent='Finalizing questions and feedback…';
+      else if(seconds>12)quizProgressBox.name.textContent='Writing useful questions…';
+      else if(seconds>3)quizProgressBox.name.textContent='Matching words and difficulty…';
+    },400);
+  }
+  function stopQuizProgress(success=false) {
+    if(quizProgressTimer!==null)clearInterval(quizProgressTimer);
+    quizProgressTimer=null;
+    if(quizProgressBox){
+      if(success){
+        setQuizProgress(100,(Date.now()-quizProgressBegin)/1000);
+        quizProgressBox.name.textContent='Quiz ready';
+        quizProgressBox.info.textContent='Completed';
+      } else {
+        quizProgressBox.name.textContent='Quiz generation stopped';
+        quizProgressBox.info.textContent='Check the message above';
+      }
+    }
+  }
   function renderStudy(){
     const words=selection();
     practiceOutput.replaceChildren();
@@ -535,6 +605,14 @@
     };
     function show() {
       shell.replaceChildren();
+      const completed=Math.min(current,questions.length);
+      const meter=createQuizProgress(current>=questions.length?'Practice completed':'Your progress','Completed quiz questions');
+      meter.percent.textContent=Math.round(100*completed/questions.length)+'%';
+      meter.fill.style.width=(100*completed/questions.length)+'%';
+      meter.track.setAttribute('aria-valuenow',String(Math.round(100*completed/questions.length)));
+      meter.elapsed.textContent=completed+' of '+questions.length+' completed';
+      meter.info.textContent=current>=questions.length?'All questions completed':'Next: question '+(current+1);
+      shell.appendChild(meter.box);
       if (current >= questions.length) {
         const headline = document.createElement('h3');
         headline.textContent = 'Practice complete';
@@ -638,8 +716,8 @@
     button.disabled=true;
     button.textContent='Generating questions…';
     message.textContent='Generating a '+config.level+' quiz · 5 AI credits.';
-    practiceOutput.replaceChildren();
     practiceStatus.textContent='Generating '+config.questionCount+' questions at '+config.level+' level…';
+    startQuizProgress(config.questionCount,config.level);
     showScreen('practice');
     try {
       const controller = new AbortController();
@@ -656,12 +734,14 @@
       const payload = await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(payload.error || 'Could not generate quiz.');
       if(!Array.isArray(payload.questions) || !payload.questions.length) throw new Error('No valid questions were returned.');
+      stopQuizProgress(true);
       lastQuiz = {id:Date.now(),file:lastFile,level:config.level,type:config.quizType,
         questions:payload.questions,date:new Date().toISOString()};
       saveQuiz(lastQuiz);
       message.textContent = payload.questions.length + ' questions ready · Saved for replay without AI credits.';
       renderQuiz(lastQuiz);
     } catch(error) {
+      stopQuizProgress(false);
       practiceStatus.textContent=error.name==='AbortError'?'Quiz generation timed out. Try fewer questions.':String(error.message || error);
       message.textContent=practiceStatus.textContent;
     } finally {

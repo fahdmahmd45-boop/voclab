@@ -5,7 +5,7 @@ process.env.OPENAI_API_KEY='test-only-not-a-secret';
 const handler=require('../api/ai');
 const validWords=[{word:'achieve',arabic:'يحقق',english_definition:'reach a goal',example:'They achieve goals.'},{word:'resilience',arabic:'المرونة',english_definition:'bounce back',example:'She showed resilience.'}];
 function request(body){
-  return {method:'POST',headers:{'content-type':'application/json','x-forwarded-for':'test-network-quiz'},body,socket:{remoteAddress:'127.0.0.1'}};
+  return {method:'POST',headers:{'content-type':'application/json','authorization':'Bearer test-session-token','x-forwarded-for':'test-network-quiz'},body,socket:{remoteAddress:'127.0.0.1'}};
 }
 function response(){
   return {

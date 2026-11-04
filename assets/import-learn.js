@@ -73,7 +73,7 @@
     '<div class="voc-import-progress-foot"><span id="vocImportProgressTime">00:00 elapsed</span><span id="vocImportProgressHint">Estimated progress · actual processing time varies</span></div>' +
     '</div>' +
     '<p id="vocImportStatus" role="status" aria-live="polite" style="font-size:13px;color:var(--mut);margin-top:12px"></p>' +
-    '</div><div id="vocImportResults"></div></div>';
+    '</div><div id="vocImportResults"></div><div id="vocImportSavedQuizzes"></div></div>';
   const get = id => document.getElementById(id);
   const intents = get('vocImportIntents');
   const status = get('vocImportStatus');
@@ -98,6 +98,8 @@
     .voc-import-answer{border:1px solid var(--line);background:var(--card2);text-align:left;color:var(--tx);border-radius:8px;padding:13px;min-height:42px;cursor:pointer;font:inherit;font-size:13px}
     .voc-import-answer[aria-pressed="true"]{border:2px solid var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--card))}
     .voc-import-feedback{font-size:13px;line-height:1.7}.voc-import-feedback:empty{display:none}.voc-import-feedback p{margin-top:6px;color:var(--mut)}
+    .voc-import-saved{display:block;width:100%;text-align:left;padding:13px;background:var(--card);border:1px solid var(--line);border-radius:9px;color:var(--tx);cursor:pointer;font-family:inherit;font-size:12px}
+    .voc-import-saved:hover{border-color:var(--amber)}
     .voc-import-summary{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:9px}
     @media(max-width:540px){.voc-import-levels{grid-template-columns:repeat(3,minmax(0,1fr))}.voc-import-types{grid-template-columns:1fr 1fr}.voc-import-choice{padding:11px 6px;font-size:11px}.voc-import-quiz{padding:15px}}
     .voc-import-progress{margin-top:18px;padding:16px;border:1px solid var(--line);background:var(--card);border-radius:15px}
@@ -310,12 +312,37 @@
       }
     });
   });
+  function showSavedQuizzes() {
+    const area = get('vocImportSavedQuizzes');
+    if (!area) return;
+    area.replaceChildren();
+    let quizzes = [];
+    try {const raw = JSON.parse(localStorage.getItem('engl01_import_quizzes') || '[]');quizzes = Array.isArray(raw) ? raw.slice(0,3) : [];} catch {}
+    if (!quizzes.length) return;
+    const heading = document.createElement('h3');
+    heading.textContent = 'Saved practice · No extra AI credits';
+    heading.style.cssText='font-size:15px;margin:20px 0 9px';
+    const items = document.createElement('div');
+    items.style.cssText='display:grid;gap:8px';
+    quizzes.forEach(quiz => {
+      if (!Array.isArray(quiz.questions) || !quiz.questions.length) return;
+      const line = document.createElement('button');
+      line.type='button';
+      line.className='voc-import-saved';
+      line.textContent = (quiz.file || 'Imported vocabulary') + ' · ' +
+        (quiz.level || 'B2') + ' · ' + quiz.questions.length + ' questions · Replay';
+      line.addEventListener('click', () => renderQuiz(quiz));
+      items.appendChild(line);
+    });
+    area.append(heading,items);
+  }
   function saveQuiz(quiz) {
     try {
       const existing = JSON.parse(localStorage.getItem('engl01_import_quizzes') || '[]');
       const all = Array.isArray(existing) ? existing : [];
       all.unshift(quiz);
-      localStorage.setItem('engl01_import_quizzes', JSON.stringify(all.slice(0,5)));
+      localStorage.setItem('engl01_import_quizzes', JSON.stringify(all.slice(0,3)));
+      showSavedQuizzes();
     } catch (error) { console.warn('Could not save quiz locally', error); }
   }
   function renderQuiz(quiz) {
@@ -470,6 +497,7 @@
     }
   }
 
+  showSavedQuizzes();
   get('vocImportFile').addEventListener('change', () => {
     if (working) return;
     entries=[];selected.clear();result.innerHTML='';

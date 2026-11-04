@@ -54,7 +54,7 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   get('vocImportQuiz').click();
   assert.equal(window.document.querySelector('#p-files').dataset.flowStage,'practice');
   assert.ok(get('vocImportPracticeOutput').querySelector('.voc-quiz-progress'),'estimated quiz progress visible during generation');
-  assert.ok(get('vocImportPracticeOutput [role="progressbar"]'));
+  assert.ok(get('vocImportPracticeOutput').querySelector('[role="progressbar"]'));
   for(let i=0;i<30 && !get('vocImportPracticeOutput').querySelector('.voc-import-quiz');i++)await tick();
   assert.equal(modeCalls[1],'quiz');
   assert.ok(get('vocImportPracticeOutput').querySelector('.voc-import-quiz'));

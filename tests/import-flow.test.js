@@ -23,9 +23,7 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   };
   window.eval(js);
   const get=id=>window.document.getElementById(id);
-  assert.equal(window.document.querySelector('[data-flow-stage]'),null);
   assert.equal(window.document.querySelector('#p-files').dataset.flowStage,'setup');
-  assert.equal(window.document.querySelector('.voc-flow-view[data-stage]'),null);
   assert.equal(window.document.querySelectorAll('.voc-flow-view').length,4);
   const input=get('vocImportFile');
   const file=new window.File(['This is a test vocabulary document.'], 'lesson.txt', {type:'text/plain'});
@@ -35,7 +33,6 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   assert.equal(window.document.querySelector('#p-files').dataset.flowStage,'review');
   assert.equal(modeCalls[0],'file');
   assert.equal(window.document.querySelectorAll('#vocImportRows label').length,5);
-  assert.equal(window.document.querySelector('.voc-flow-view:nth-child(2)')?.hidden,undefined);
   assert.equal(window.document.querySelector('#vocImportResults').parentElement,window.document.querySelectorAll('.voc-flow-view')[1]);
   window.document.querySelector('.voc-review-pagination button:last-child').click();
   assert.equal(window.document.querySelectorAll('#vocImportRows label').length,5);

@@ -818,28 +818,38 @@ fSrc.onchange=()=>{picked=true;listVisible=0;rebuildUnits();refresh()};
 fUnit.onchange=()=>{picked=true;listVisible=0;refresh()};fKnown.onchange=()=>{picked=true;listVisible=0;refresh()};
 fSearch.oninput=()=>{picked=true;listVisible=0;if(curTab==='list')renderList(true)};
 
-/* ---------- theme ---------- */
+/* ---------- theme (VL redesign: light / dark only) ---------- */
 const btnTheme=document.getElementById('btnTheme');
-const THEME_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1.4-3.4 1.9 1.9 0 0 1 1.4-3.2H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>';
+const THEME_ICON_MOON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+const THEME_ICON_SUN='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
 function applyTheme(t){
   document.body.classList.toggle('light',t==='light');
-  document.body.classList.toggle('pink',t==='pink');
-  btnTheme.innerHTML=THEME_ICON;
+  document.body.classList.remove('pink');
+  if(btnTheme){
+    btnTheme.innerHTML=t==='dark'?THEME_ICON_SUN:THEME_ICON_MOON;
+    const label=t==='dark'?'Switch to light theme':'Switch to dark theme';
+    btnTheme.title=label;
+    btnTheme.setAttribute('aria-label',label);
+    btnTheme.setAttribute('aria-pressed',String(t==='dark'));
+  }
   const color=document.querySelector('meta[name="theme-color"]');
-  if(color)color.content=t==='pink'?'#FFF8FA':t==='light'?'#FAFAF8':'#121415';
+  if(color)color.content=t==='light'?'#F7F6F0':'#141813';
 }
 let theme=store.get('engl01_theme')||'light';
-if(!['dark','light','pink'].includes(theme))theme='dark';
+if(theme==='pink')theme='light';
+if(!['dark','light'].includes(theme))theme='light';
 applyTheme(theme);
 window.voclabGetTheme=()=>theme;
 window.voclabSetTheme=(next)=>{
-  if(!['dark','light','pink'].includes(next))return;
+  if(next==='pink')next='light';
+  if(!['dark','light'].includes(next))return;
   theme=next;
   store.set('engl01_theme',theme);
   applyTheme(theme);
   window.dispatchEvent(new CustomEvent('voclab:themechange',{detail:{theme}}));
 };
-btnTheme.onclick=()=>window.voclabSetTheme(theme==='dark'?'light':theme==='light'?'pink':'dark');
+window.voclabToggleTheme=()=>window.voclabSetTheme(theme==='dark'?'light':'dark');
+if(btnTheme)btnTheme.onclick=window.voclabToggleTheme;
 
 /* ---------- filter drawer (swipe from left edge to open, swipe left to close) ---------- */
 const drawer=document.getElementById('drawer'),overlay=document.getElementById('overlay');

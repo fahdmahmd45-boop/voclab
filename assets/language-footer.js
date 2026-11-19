@@ -21,7 +21,7 @@
     if (!document.querySelector('meta[name="theme-color"]')) {
       const theme = document.createElement('meta');
       theme.name = 'theme-color';
-      theme.content = document.body.classList.contains('pink') ? '#FFF8FA' : document.body.classList.contains('light') ? '#FAFAF8' : '#121415';
+      theme.content = document.body.classList.contains('light') ? '#F7F6F0' : '#141813';
       document.head.appendChild(theme);
     }
   }
@@ -193,14 +193,11 @@
     loadSiteIcon();
     loadAppRedesign();
     loadAiTabsPolish();
-    loadOriginalWidthTabsFix();
-    loadCompactMobileTabs();
-    loadHomeUxRedesign();
-    loadBeVietnamProPreview();
+    // Navigation and typography now use the consolidated VL design shell.
     loadSubscriptionUx();
     injectStyles();
     createInstagramHeader();
-    createFooter();
+    // Footer is outside the new application-shell experience.
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });

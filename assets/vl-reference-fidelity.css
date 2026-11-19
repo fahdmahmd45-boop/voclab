@@ -42,7 +42,8 @@ html body.vl-shell .hcard .hbar>i,html body.vl-shell .home .pbar>i{background:va
   html body.vl-shell #p-cards .hgrid,html body.vl-shell #p-mcq .hgrid,html body.vl-shell #p-type .hgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 @media(max-width:1023.98px){
-  html body.vl-shell .home{display:grid!important;grid-template-columns:1fr!important}
+  html body.vl-shell .home{display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+    grid-template-areas:"eyebrow" "greet" "quote" "streak" "progress" "head" "decks"!important}
   html body.vl-shell .home>.hgreet{font-size:clamp(36px,7.5vw,47px)!important;line-height:1.08!important}
   html body.vl-shell .home>.hquote{font-size:13px!important;margin:8px 0 18px!important}
   html body.vl-shell .home>.hhead{margin:18px 0 4px!important;padding-top:14px!important}

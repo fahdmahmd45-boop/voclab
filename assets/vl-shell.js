@@ -6,7 +6,7 @@
   window.__VL_SHELL__=true;
   const DESTINATIONS=[
     {id:'home',label:'Home',subs:[['home','Overview']]},
-    {id:'library',label:'Library',subs:[['list','Browse decks'],['my','My words']]},
+    {id:'library',label:'Library',subs:[['list','Decks'],['my','My words']]},
     {id:'study',label:'Study',subs:[['cards','Flashcards'],['mcq','Quiz'],['type','Spelling']]},
     {id:'create',label:'Create',subs:[['files','Import & Learn'],['dict','AI Search']]}
   ];
@@ -52,6 +52,8 @@
     themeBtn.addEventListener('click',()=>window.voclabToggleTheme?.());
     nav.querySelector('#vlFiltersBtn').addEventListener('click',()=>document.getElementById('btnDrawer')?.click());
     document.body.appendChild(nav);
+    // The reference mockup uses one uncluttered header; keep account actions,
+    // but remove duplicate navigation controls and counter on desktop.
     const exit=document.createElement('button');
     exit.id='vlExitStudy';exit.type='button';exit.className='vl-exit-study';
     exit.textContent='← Exit study';exit.setAttribute('aria-label','Exit study session');

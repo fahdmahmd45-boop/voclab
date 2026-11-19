@@ -838,6 +838,13 @@ function applyTheme(t){
 let theme=store.get('engl01_theme')||'light';
 if(theme==='pink')theme='light';
 if(!['dark','light'].includes(theme))theme='light';
+// The supplied reference opens in the ivory/olive theme. Migrate existing
+// devices once; future dark/light choices remain saved and respected.
+if(!store.get('vl_reference_light_seen_v1')){
+  theme='light';
+  store.set('engl01_theme','light');
+  store.set('vl_reference_light_seen_v1','1');
+}
 applyTheme(theme);
 window.voclabGetTheme=()=>theme;
 window.voclabSetTheme=(next)=>{

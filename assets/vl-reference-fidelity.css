@@ -1,0 +1,56 @@
+/* Match the user-supplied VOC LAB ZIP screenshots.
+   Reference: desktop-home-light.png, desktop-study-light.png,
+   phone-light-dark-focus.png. Loaded last, after legacy layers. */
+:root{--vl-content:1120px}
+html body.vl-shell{background:var(--bg)!important;color:var(--tx)!important}
+html body.vl-shell .vl-nav{background:var(--bg)!important}
+html body.vl-shell header{height:auto;min-height:62px;box-sizing:border-box;border-bottom:1px solid var(--line)!important;box-shadow:none!important;background:var(--bg)!important}
+html body.vl-shell .hwrap{min-height:36px}
+html body.vl-shell .vl-nav-item.on{background:var(--card2)!important}
+html body.vl-shell .vl-brand{font-family:var(--en)!important}
+html body.vl-shell .vl-subnav button{font-size:15px;letter-spacing:-.01em}
+html body.vl-shell .vl-subnav button.on{border-color:var(--amber)}
+html body.vl-shell .home{column-gap:28px!important;row-gap:8px!important}
+html body.vl-shell .home>.eyebrow{font-size:10px!important;letter-spacing:.14em!important;color:var(--mut)!important;line-height:1.5!important}
+html body.vl-shell .home>.hgreet{font-family:var(--en)!important;font-weight:400!important;letter-spacing:-.045em!important}
+html body.vl-shell .home>.hquote{font-family:var(--ui)!important;color:var(--mut)!important;font-size:14px!important;line-height:1.55!important}
+html body.vl-shell .home>.hhead{padding-top:0!important;border-top:1px solid var(--line)!important}
+html body.vl-shell .home>.hhead h3{font-family:var(--ui)!important;font-size:11px!important;letter-spacing:.12em!important}
+html body.vl-shell .home>.hgrid{gap:12px!important}
+html body.vl-shell .hcard{border:1px solid var(--line)!important;border-radius:6px!important;background:var(--card)!important;box-shadow:none!important;transform:none!important}
+html body.vl-shell .hcard:hover{border-color:var(--amber)!important;box-shadow:none!important;transform:none!important}
+html body.vl-shell .home>#streakBox,
+html body.vl-shell .home>.hprog{border:1px solid var(--line)!important;border-radius:6px!important;background:var(--card)!important;box-shadow:none!important}
+html body.vl-shell .hcard .hbar,html body.vl-shell .home .pbar{background:var(--card2)!important;height:3px!important}
+html body.vl-shell .hcard .hbar>i,html body.vl-shell .home .pbar>i{background:var(--amber)!important}
+@media(min-width:1024px){
+  html body.vl-shell{padding-left:232px!important}
+  html body.vl-shell .vl-nav{width:232px!important}
+  html body.vl-shell main{max-width:var(--vl-content)!important;margin:0 auto!important;padding:24px 32px 64px!important}
+  html body.vl-shell header{padding:12px 32px!important}
+  html body.vl-shell .hwrap{max-width:var(--vl-content)!important}
+  html body.vl-shell .home{grid-template-columns:minmax(0,1.7fr) minmax(315px,1fr)!important}
+  html body.vl-shell .home>.hgreet{font-size:clamp(46px,4.1vw,59px)!important;line-height:1.08!important}
+  html body.vl-shell .home>.hquote{max-width:620px;margin:8px 0 22px!important}
+  html body.vl-shell .home>#streakBox{min-height:125px!important;padding:22px!important}
+  html body.vl-shell .home>.hprog{min-height:94px!important;padding:18px 20px!important}
+  html body.vl-shell .home>.hhead{margin:18px 0 5px!important;padding-top:10px!important}
+  html body.vl-shell .home>.hgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  html body.vl-shell .hcard{min-height:172px!important;padding:20px!important}
+  html body.vl-shell .hcard .ht{font-size:19px!important}
+  html body.vl-shell .hcard .hsub{font-size:12px!important}
+  html body.vl-shell #p-cards .hgrid,html body.vl-shell #p-mcq .hgrid,html body.vl-shell #p-type .hgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:1023.98px){
+  html body.vl-shell .home{display:grid!important;grid-template-columns:1fr!important}
+  html body.vl-shell .home>.hgreet{font-size:clamp(36px,7.5vw,47px)!important;line-height:1.08!important}
+  html body.vl-shell .home>.hquote{font-size:13px!important;margin:8px 0 18px!important}
+  html body.vl-shell .home>.hhead{margin:18px 0 4px!important;padding-top:14px!important}
+  html body.vl-shell .home>.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  html body.vl-shell .hcard{min-height:136px!important;padding:13px 12px!important}
+  html body.vl-shell .vl-nav{box-shadow:none!important}
+}
+@media(max-width:420px){
+  html body.vl-shell .hcard{min-height:134px!important}
+  html body.vl-shell main{padding-left:12px!important;padding-right:12px!important}
+}

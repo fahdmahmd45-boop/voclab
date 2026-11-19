@@ -17,6 +17,7 @@ jobs:
       - run: node --test tests/import-flow.test.js
       - run: node --test tests/import-review-compact.test.js
       - run: node --test tests/vl-shell.test.js
+      - run: node --test tests/vl-reference-fidelity.test.js
       - run: node --check assets/vl-shell.js
       - run: node --check assets/import-review-compact.js
       - run: node --check assets/import-learn.js

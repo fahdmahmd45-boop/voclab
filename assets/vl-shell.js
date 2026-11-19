@@ -51,7 +51,20 @@
     themeBtn=nav.querySelector('#vlThemeBtn');
     themeBtn.addEventListener('click',()=>window.voclabToggleTheme?.());
     nav.querySelector('#vlFiltersBtn').addEventListener('click',()=>document.getElementById('btnDrawer')?.click());
-    document.body.appendChild(nav);document.body.classList.add('vl-shell');
+    document.body.appendChild(nav);
+    const exit=document.createElement('button');
+    exit.id='vlExitStudy';exit.type='button';exit.className='vl-exit-study';
+    exit.textContent='← Exit study';exit.setAttribute('aria-label','Exit study session');
+    exit.addEventListener('click',()=>{
+      if(typeof window.goHome==='function')window.goHome();
+      else {
+        try{picked=false}catch{}
+        openTab('home');
+      }
+      sync();
+    });
+    document.body.appendChild(exit);
+    document.body.classList.add('vl-shell');
   }
   function buildSubnav(){
     const main=document.querySelector('main');if(!main)return;
@@ -98,7 +111,7 @@
     window.addEventListener('voclab:themechange',syncTheme);
     document.addEventListener('keydown',event=>{
       if(event.key==='Escape'&&document.body.classList.contains('vl-in-session')){
-        document.querySelector('.panel.on .voc-deck-back')?.click();
+        document.getElementById('vlExitStudy')?.click();
       }
     });
   }

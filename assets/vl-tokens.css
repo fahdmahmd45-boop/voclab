@@ -1,0 +1,28 @@
+/* VOC LAB · Field Notebook brand tokens — Phase 1 */
+html:root body{
+  --vl-olive:#526749;--vl-olive-muted:#78876B;--vl-ivory:#F7F6F0;
+  --vl-warm-white:#FCFBF7;--vl-charcoal:#252D25;--vl-border:#DCDDD2;
+  --en:'Newsreader',Georgia,serif;
+  --ui:'Instrument Sans','Inter',-apple-system,'Segoe UI',sans-serif;
+  --ar:'IBM Plex Sans Arabic','Instrument Sans',sans-serif;
+  --r:6px;--voc-radius-sm:4px;--voc-radius-md:6px;--voc-radius-lg:8px;--shadow:none;
+}
+html:root body:not(.light){
+  --bg:#141813;--hd:#141813;--card:#1C211B;--card2:#232922;--line:#30372E;
+  --tx:#ECEBE3;--mut:#9CA692;--amber:#A9BE97;--onacc:#141813;
+  --ok:#8DBF86;--bad:#E08B6B;--blue:#8DB7D3;
+  --vl-body:#C8CCBF;--vl-rule-soft:#262C25;color-scheme:dark;
+}
+html:root body.light{
+  --bg:#F7F6F0;--hd:#F7F6F0;--card:#FCFBF7;--card2:#EFEEE6;--line:#DCDDD2;
+  --tx:#252D25;--mut:#5F6A58;--amber:#526749;--onacc:#FCFBF7;
+  --ok:#4A7A45;--bad:#A4512F;--blue:#3D6F8F;
+  --vl-body:#3B443A;--vl-rule-soft:#E8E8DF;color-scheme:light;
+}
+body,button,input,select,textarea{font-family:var(--ui)}
+:lang(ar),[dir="rtl"]{font-family:var(--ar)}
+::selection{background:var(--amber);color:var(--onacc)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}

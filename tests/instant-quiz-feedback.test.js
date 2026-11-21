@@ -14,6 +14,8 @@ async function makeQuiz(question){
   const {window}=dom;
   window.scrollTo=()=>{};
   const sounds=[];
+  // Browsers with HTML audio should use cached WAV playback.
+  // JSDOM tests the Web Audio fallback by default.
   window.AudioContext=class {
     currentTime=0;
     state='running';
@@ -94,5 +96,44 @@ test('typed questions keep explicit Check answer flow',async()=>{
   assert.equal(d.querySelector('.voc-feedback-correct strong').textContent,'✓ Correct!');
   assert.equal(sounds.length,2);
   assert.equal(next.textContent,'View results');
+  dom.window.close();
+});
+
+
+test('test-sound button exposes sound controls and reuses audio without AI credits',async()=>{
+  const {dom,d,sounds,getCalls}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  const testButton=d.querySelector('.voc-quiz-test-sound');
+  assert.ok(testButton);
+  testButton.click();
+  assert.equal(sounds.length,2,'test button plays the same two-note chime');
+  assert.equal(getCalls(),2,'testing sound must not use AI credits');
+  assert.match(d.querySelector('.voc-quiz-audio-notice').textContent,/volume/);
+  dom.window.close();
+});
+
+test('prefers cached HTML WAV for mobile browser and does not create AudioContexts',async()=>{
+  const {dom,d,sounds,getCalls}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  let created=0,plays=0,pauses=0;
+  dom.window.URL.createObjectURL=()=>{created++;return 'blob:https://voclab.website/mock-sound'};
+  dom.window.Audio=class {
+    constructor(src){this.src=src;this.currentTime=0;}
+    pause(){pauses++;}
+    play(){plays++;return Promise.resolve();}
+  };
+  d.querySelector('.voc-quiz-test-sound').click();
+  d.querySelector('.voc-import-answer').click();
+  assert.equal(created,1,'audio asset should be created once');
+  assert.equal(plays,2,'the same cached audio plays for test and correct answer');
+  assert.equal(pauses,2);
+  assert.equal(sounds.length,0,'Web Audio fallback is not used when WAV playback succeeds');
+  assert.equal(getCalls(),2,'sound must never make extra API calls');
   dom.window.close();
 });

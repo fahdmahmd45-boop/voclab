@@ -196,12 +196,14 @@
           showResults({document_type:'saved vocabulary'});
           reviewQuizSource=currentQuiz;
         }
-        const resume=document.createElement('button');
-        resume.type='button';resume.className='next voc-return-to-quiz';
-        resume.textContent='Continue quiz · no AI credits';
-        resume.addEventListener('click',()=>showScreen('practice'));
         const reviewCard=get('vocImportRows')?.closest('.myform');
-        reviewCard?.append(resume);
+        if(reviewCard && !reviewCard.querySelector('.voc-return-to-quiz')){
+          const resume=document.createElement('button');
+          resume.type='button';resume.className='next voc-return-to-quiz';
+          resume.textContent='Continue quiz · no AI credits';
+          resume.addEventListener('click',()=>showScreen('practice'));
+          reviewCard.append(resume);
+        }
       } else {
         renderLegacyVocabularyReview(currentQuiz);
       }

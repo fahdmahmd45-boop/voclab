@@ -171,15 +171,26 @@ function levelStatHTML(){
 }
 
 /* ---------- speech ---------- */
+// iPadOS can identify itself as Macintosh when using desktop browsing.
+// A shared pace is used for AI Search, Library, flashcards and imported words.
+function voclabSpeechRate(){
+  const ua=String(navigator.userAgent||'');
+  const isIPad=/iPad/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
+  return isIPad?0.72:0.80;
+}
+window.voclabSpeechRate=voclabSpeechRate;
 function speak(t,lang='en-US'){
   try{
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(t);u.lang=lang;u.rate=.88;
+    const u=new SpeechSynthesisUtterance(t);
+    u.lang=lang;
+    u.rate=voclabSpeechRate();
+    u.pitch=1;
     const voices=speechSynthesis.getVoices();
     const want=String(lang||'en-US').toLowerCase();
     const exact=voices.find(v=>String(v.lang||'').toLowerCase()===want);
     if(exact)u.voice=exact;
-    speechSynthesis.speak(u)
+    speechSynthesis.speak(u);
   }catch(e){}
 }
 

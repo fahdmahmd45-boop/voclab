@@ -15,6 +15,7 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm install --no-save --ignore-scripts jsdom@26
       - run: node --test tests/import-flow.test.js
+      - run: node --test tests/study-card-layout.test.js
       - run: node --test tests/import-review-compact.test.js
       - run: node --test tests/vl-shell.test.js
       - run: node --test tests/vl-reference-fidelity.test.js

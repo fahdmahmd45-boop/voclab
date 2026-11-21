@@ -153,6 +153,9 @@
     .voc-import-cost strong{font-size:12px}.voc-import-cost span{font-size:11px;color:var(--mut)}
     .voc-import-quiz{margin-top:22px;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;display:grid;gap:17px}
     .voc-import-quiz h3{font-family:var(--en);font-size:23px;line-height:1.35}
+    .voc-quiz-sound-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:-7px 0 4px}
+    .voc-quiz-test-sound{font-size:12px!important;padding:7px 11px!important;min-height:34px}
+    .voc-quiz-audio-notice{font-size:11px;color:var(--mut);line-height:1.4}
     .voc-import-quiz-top{display:flex;justify-content:space-between;gap:12px;color:var(--mut);font-size:12px}
     .voc-import-responses{display:grid;gap:9px}
     .voc-import-answer{border:1px solid var(--line);background:var(--card2);text-align:left;color:var(--tx);border-radius:8px;padding:13px;min-height:42px;cursor:pointer;font:inherit;font-size:13px}
@@ -653,36 +656,94 @@
     showScreen('practice');
   }
 
-  function playCorrectAnswerSound() {
-    // Short, positive two-note chime. Only played from a direct user click.
-    // Uses local Web Audio; no audio fetch, API call, or AI credits.
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    let ctx;
-    try {
-      ctx = new AudioContextClass();
-      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-        ctx.resume().catch(() => {});
+  // The original one-off AudioContext could remain suspended on Safari and
+  // was closed on a fixed timer before an asynchronous resume completed.
+  // Prefer a cached short WAV played by HTMLAudioElement from the click event;
+  // keep one reusable Web Audio context only as a fallback.
+  let quizChimeAudio=null;
+  let quizChimeUrl=null;
+  let quizSoundContext=null;
+  let quizAudioNotice=null;
+  function makeQuizChimeWav(){
+    const rate=16000, duration=0.36, count=Math.floor(rate*duration);
+    const bytes=new ArrayBuffer(44+count*2);
+    const view=new DataView(bytes);
+    const write=(pos,str)=>{for(let i=0;i<str.length;i++)view.setUint8(pos+i,str.charCodeAt(i))};
+    write(0,'RIFF');view.setUint32(4,36+count*2,true);write(8,'WAVE');
+    write(12,'fmt ');view.setUint32(16,16,true);
+    view.setUint16(20,1,true);view.setUint16(22,1,true);
+    view.setUint32(24,rate,true);view.setUint32(28,rate*2,true);
+    view.setUint16(32,2,true);view.setUint16(34,16,true);
+    write(36,'data');view.setUint32(40,count*2,true);
+    for(let i=0;i<count;i++){
+      const t=i/rate;
+      function note(freq,start,length){
+        if(t<start||t>=start+length)return 0;
+        const elapsed=t-start;
+        const fadeIn=Math.min(1,elapsed/.014);
+        const fadeOut=Math.pow(Math.max(0,1-elapsed/length),2);
+        return Math.sin(2*Math.PI*freq*elapsed)*fadeIn*fadeOut;
       }
-      const start = ctx.currentTime;
-      [[659.25,0],[880,0.12]].forEach(([frequency, offset]) => {
-        const tone = ctx.createOscillator();
-        const gain = ctx.createGain();
-        tone.type = 'sine';
-        tone.frequency.setValueAtTime(frequency,start + offset);
-        gain.gain.setValueAtTime(0.0001,start + offset);
-        gain.gain.exponentialRampToValueAtTime(0.085,start + offset + 0.016);
-        gain.gain.exponentialRampToValueAtTime(0.0001,start + offset + 0.20);
-        tone.connect(gain);
-        gain.connect(ctx.destination);
-        tone.start(start + offset);
-        tone.stop(start + offset + 0.21);
-      });
-      // Close the short-lived context after notes finish; no persistent audio loop.
-      setTimeout(() => {ctx.close().catch(() => {});},550);
-    } catch {
-      if (ctx && typeof ctx.close === 'function') ctx.close().catch(() => {});
+      const sample=0.38*(note(659.25,0,.19)+note(880,.115,.22));
+      view.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,sample))*32767),true);
     }
+    return new Blob([bytes],{type:'audio/wav'});
+  }
+  function playFallbackChime(){
+    const Context=window.AudioContext||window.webkitAudioContext;
+    if(!Context)return false;
+    try{
+      if(!quizSoundContext || quizSoundContext.state==='closed')quizSoundContext=new Context();
+      const ctx=quizSoundContext;
+      // resume() MUST be invoked while we are still in the user click handler.
+      const ready=ctx.state==='suspended' && typeof ctx.resume==='function'
+        ? ctx.resume() : null;
+      const play=()=>{
+        const now=ctx.currentTime+.015;
+        [[659.25,0],[880,.12]].forEach(([freq,offset])=>{
+          const oscillator=ctx.createOscillator(),gain=ctx.createGain();
+          oscillator.type='sine';
+          oscillator.frequency.setValueAtTime(freq,now+offset);
+          gain.gain.setValueAtTime(.0001,now+offset);
+          gain.gain.exponentialRampToValueAtTime(.12,now+offset+.025);
+          gain.gain.exponentialRampToValueAtTime(.0001,now+offset+.23);
+          oscillator.connect(gain);gain.connect(ctx.destination);
+          oscillator.start(now+offset);oscillator.stop(now+offset+.24);
+        });
+      };
+      if(ready && typeof ready.then==='function'){
+        ready.then(play).catch(()=>{if(quizAudioNotice)quizAudioNotice.textContent='Sound is blocked. Check device volume and browser sound permissions.'});
+      }else play();
+      return true;
+    }catch{
+      return false;
+    }
+  }
+  function playCorrectAnswerSound(){
+    try{
+      // HTML audio handles iOS/Safari's media playback rules more consistently
+      // than a freshly created and immediately closed AudioContext.
+      if(typeof window.Audio==='function' && window.URL && typeof window.URL.createObjectURL==='function'){
+        if(!quizChimeAudio){
+          quizChimeUrl=window.URL.createObjectURL(makeQuizChimeWav());
+          quizChimeAudio=new window.Audio(quizChimeUrl);
+          quizChimeAudio.preload='auto';
+          quizChimeAudio.volume=.8;
+        }
+        quizChimeAudio.pause();
+        quizChimeAudio.currentTime=0;
+        const result=quizChimeAudio.play();
+        if(result && typeof result.catch==='function'){
+          result.catch(()=>{if(!playFallbackChime()&&quizAudioNotice)quizAudioNotice.textContent='Sound is blocked. Check device volume and browser sound permissions.'});
+        }
+        return true;
+      }
+    }catch{
+      // Unsupported HTML audio/Blob URL: try native oscillators instead.
+    }
+    const ok=playFallbackChime();
+    if(!ok && quizAudioNotice)quizAudioNotice.textContent='Sound is unavailable in this browser.';
+    return ok;
   }
 
   function renderQuiz(quiz) {
@@ -715,6 +776,23 @@
       meter.elapsed.textContent=completed+' of '+questions.length+' completed';
       meter.info.textContent=current>=questions.length?'All questions completed':'Next: question '+(current+1);
       shell.appendChild(meter.box);
+      if(current<questions.length){
+        const soundRow=document.createElement('div');
+        soundRow.className='voc-quiz-sound-row';
+        const testSound=document.createElement('button');
+        testSound.type='button';testSound.className='kbtn voc-quiz-test-sound';
+        testSound.textContent='🔊 Test sound';
+        testSound.setAttribute('aria-label','Test correct-answer sound');
+        quizAudioNotice=document.createElement('span');
+        quizAudioNotice.className='voc-quiz-audio-notice';
+        quizAudioNotice.setAttribute('role','status');
+        testSound.addEventListener('click',()=>{
+          playCorrectAnswerSound();
+          quizAudioNotice.textContent='If silent, check device volume, silent mode and site sound permissions.';
+        });
+        soundRow.append(testSound,quizAudioNotice);
+        shell.appendChild(soundRow);
+      }
       if (current >= questions.length) {
         const headline = document.createElement('h3');
         headline.textContent = 'Practice complete';

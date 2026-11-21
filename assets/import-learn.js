@@ -878,7 +878,12 @@
       return button;
     };
     const normalize=value=>String(value||'').trim().toLowerCase().replace(/[.!?]+$/,'');
-    function toReview(){openVocabularyReview();}
+    function toReview(){
+      // A file input change clears transient state, but this quiz still owns
+      // its saved words/questions. Restore its context before reviewing.
+      currentQuiz=quiz;
+      openVocabularyReview();
+    }
     function render(){
       const completed=Math.min(current,questions.length);
       const progress=Math.round(100*completed/questions.length);

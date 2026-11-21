@@ -1,0 +1,59 @@
+/* VOC LAB — intentionally quiet, responsive quiz workspace.
+   One task at a time. The progress control stays mounted between questions. */
+#p-files .voc-flow-view[data-voc-unused]{display:none}
+#p-files .voc-flow-view{max-width:850px}
+#p-files .voc-flow-title{margin:0 0 12px}
+#p-files .voc-flow-title .eyebrow{font-size:10px;letter-spacing:.13em}
+#p-files .voc-flow-title h2{font-size:clamp(29px,3vw,38px);margin:4px 0 3px}
+#p-files #vocImportPracticeStatus:empty{display:none}
+#p-files .voc-import-quiz.voc-quiz-refined{
+  max-width:760px;margin:10px auto 0;padding:clamp(19px,3vw,32px);
+  border:1px solid var(--line);border-radius:10px;background:var(--card);
+  box-shadow:none;display:block
+}
+#p-files .voc-quiz-slim-meter{padding:0 0 16px;margin:0 0 20px;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-top{font-size:12px;margin-bottom:9px}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-top strong{font-weight:600;color:var(--mut)}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-top span{font-size:12px;font-weight:600;color:var(--amber)}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-track{height:5px;border:0;border-radius:20px;background:var(--card2)}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-fill{background:var(--amber);transition:width .22s ease}
+#p-files .voc-quiz-slim-meter .voc-quiz-progress-foot{margin-top:6px;font-size:10px}
+#p-files .voc-quiz-stage{min-width:0;display:grid;gap:15px;animation:voc-quiz-enter .17s ease-out both}
+@keyframes voc-quiz-enter{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+#p-files .voc-quiz-stage .voc-import-quiz-top{align-items:center;margin:0;color:var(--mut);font-size:11px;letter-spacing:.045em}
+#p-files .voc-quiz-test-sound{font:500 11px var(--ui);color:var(--mut);background:transparent;border:0;padding:7px 9px;cursor:pointer;white-space:nowrap;border-radius:5px}
+#p-files .voc-quiz-test-sound:hover{color:var(--tx);background:var(--card2)}
+#p-files .voc-quiz-stage h3.voc-quiz-prompt{font-family:var(--en);font-size:clamp(23px,2.6vw,33px);font-weight:500;letter-spacing:-.025em;line-height:1.25;margin:1px 0 5px;text-transform:none;overflow-wrap:anywhere}
+#p-files .voc-quiz-stage .voc-import-responses{display:grid;gap:8px;margin:2px 0}
+#p-files .voc-quiz-stage .voc-import-answer{
+  display:flex;align-items:center;justify-content:space-between;text-align:left;
+  padding:12px 15px;min-height:50px;border:1px solid var(--line);
+  border-radius:7px;background:var(--card2);color:var(--tx);font:400 14px/1.5 var(--ui);
+  transition:background .15s,border-color .15s;box-shadow:none
+}
+#p-files .voc-quiz-stage .voc-import-answer:not(:disabled):hover{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 8%,var(--card))}
+#p-files .voc-quiz-stage .voc-import-answer:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#p-files .voc-quiz-stage .voc-import-feedback:empty{display:none}
+#p-files .voc-quiz-stage .voc-import-feedback:not(:empty){margin:0;padding:12px 14px;background:var(--card2);border:1px solid var(--line);border-radius:7px;font-size:13px}
+#p-files .voc-quiz-stage .voc-import-feedback strong{font-size:14px}
+#p-files .voc-quiz-stage .voc-import-feedback p{margin:5px 0 0;line-height:1.5}
+#p-files .voc-quiz-stage button.next{width:100%;margin:2px 0 0;min-height:46px;border-radius:7px;font:600 14px var(--ui)}
+#p-files .voc-quiz-stage button.next:disabled{opacity:.55}
+#p-files .voc-quiz-stage.voc-quiz-results{gap:12px}
+#p-files .voc-quiz-results .voc-quiz-eyebrow{font-size:10px;letter-spacing:.14em;color:var(--mut);margin:0}
+#p-files .voc-quiz-results h2{font:500 clamp(29px,4vw,40px)/1.15 var(--en);letter-spacing:-.035em;margin:0}
+#p-files .voc-quiz-result-number{font:500 clamp(46px,6vw,70px)/1 var(--en);letter-spacing:-.03em;color:var(--amber);margin:3px 0 0}
+#p-files .voc-quiz-result-note{font-size:12px;color:var(--mut);margin:0}
+#p-files .voc-quiz-review{border-top:1px solid var(--line);padding-top:17px;margin-top:7px}
+#p-files .voc-quiz-review h3{font:600 15px var(--ui);margin:0 0 10px}
+#p-files .voc-quiz-review p{color:var(--mut);font:400 13px/1.5 var(--ui);padding:8px 0;border-bottom:1px solid var(--line);margin:0}
+#p-files .voc-quiz-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+#p-files .voc-quiz-result-actions button{min-width:0;min-height:45px;font-size:13px}
+#p-files .voc-flow-view[data-voc-screen="practice"]>.voc-flow-back{margin-top:17px!important}
+@media(max-width:600px){
+  #p-files .voc-import-quiz.voc-quiz-refined{padding:17px 14px;margin:6px auto 0}
+  #p-files .voc-quiz-stage{gap:12px}
+  #p-files .voc-quiz-stage .voc-import-answer{min-height:50px;padding:12px}
+  #p-files .voc-quiz-result-actions{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){#p-files .voc-quiz-stage{animation:none}#p-files .voc-quiz-slim-meter .voc-quiz-progress-fill{transition:none}}

@@ -114,13 +114,21 @@
   screens.practice.appendChild(practiceStatus);
   const practiceOutput=document.createElement('div');
   practiceOutput.id='vocImportPracticeOutput';screens.practice.appendChild(practiceOutput);
-  screens.practice.appendChild(back('← Back to selected words',()=>showScreen('review')));
+  screens.practice.appendChild(back('← Back',()=>{
+    if(!entries.length && Array.isArray(currentQuiz?.words) && currentQuiz.words.length){
+      entries=currentQuiz.words.filter(w=>w && typeof w.word==='string').slice(0,40);
+      selected=new Set(entries.map(w=>w.word.toLowerCase()));
+      if(entries.length)showResults({document_type:'saved vocabulary'});
+    }
+    showScreen(entries.length?'review':'saved');
+  }));
   const savedTitle=document.createElement('div');
   savedTitle.className='voc-flow-title';
   savedTitle.innerHTML='<div class="eyebrow">SAVED PRACTICE</div><h2>Your quizzes.</h2><p>Replay without AI credits.</p>';
   screens.saved.prepend(savedTitle);
   screens.saved.appendChild(back('← New import',()=>showScreen('setup')));
   function showScreen(id){
+    const changed=panel.dataset.flowStage!==id;
     for(const [key,section] of Object.entries(screens))section.hidden=key!==id;
     for(const [key,button] of Object.entries(navButtons)){
       button.classList.toggle('active',key===id);
@@ -128,10 +136,11 @@
       button.disabled=(key==='review'&&!entries.length)||(key==='practice'&&!currentQuiz&&!practiceOutput.children.length);
     }
     panel.dataset.flowStage=id;
-    requestAnimationFrame(()=>{
+    // Don't yank the viewport around when refreshing an already-open view.
+    if(changed)requestAnimationFrame(()=>{
       const header=document.querySelector('header');
       const offset=header?header.getBoundingClientRect().height+16:16;
-      window.scrollTo({top:Math.max(0,root.getBoundingClientRect().top+window.scrollY-offset),behavior:'instant'});
+      window.scrollTo({top:Math.max(0,root.getBoundingClientRect().top+window.scrollY-offset),behavior:'auto'});
     });
   }
   showScreen('setup');
@@ -747,191 +756,202 @@
   }
 
   function renderQuiz(quiz) {
-    currentQuiz = quiz;
-    const target = practiceOutput;
-    practiceStatus.textContent='Ready · Replay without spending AI credits.';
-    showScreen('practice');
-    const questions = quiz.questions;
-    const answers = new Array(questions.length).fill('');
-    let current = 0, checked = false, correct = 0, misses = [];
+    if(!quiz || !Array.isArray(quiz.questions) || !quiz.questions.length) return;
+    currentQuiz=quiz;
+    const questions=quiz.questions;
+    const target=practiceOutput;
+    const answers=new Array(questions.length).fill('');
+    let current=0, checked=false, correct=0;
+    let misses=[];
     target.replaceChildren();
-    const shell = document.createElement('section');
-    shell.className = 'voc-import-quiz';
+    practiceStatus.textContent='';
+
+    const shell=document.createElement('section');
+    shell.className='voc-import-quiz voc-quiz-refined';
+    const meter=createQuizProgress('Your progress','Completed quiz questions');
+    meter.box.classList.add('voc-quiz-slim-meter');
+    shell.appendChild(meter.box);
+    const stage=document.createElement('section');
+    stage.className='voc-quiz-stage';
+    stage.setAttribute('aria-label','Quiz question and feedback');
+    shell.appendChild(stage);
     target.appendChild(shell);
-    const btn = (label, action, kind) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = kind || 'kbtn';
-      b.textContent = label;
-      b.addEventListener('click', action);
-      return b;
+
+    const btn=(label,action,className)=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className=className||'kbtn';
+      button.textContent=label;
+      button.addEventListener('click',action);
+      return button;
     };
-    function show() {
-      shell.replaceChildren();
-      const completed=Math.min(current,questions.length);
-      const meter=createQuizProgress(current>=questions.length?'Practice completed':'Your progress','Completed quiz questions');
-      meter.percent.textContent=Math.round(100*completed/questions.length)+'%';
-      meter.fill.style.width=(100*completed/questions.length)+'%';
-      meter.track.setAttribute('aria-valuenow',String(Math.round(100*completed/questions.length)));
-      meter.elapsed.textContent=completed+' of '+questions.length+' completed';
-      meter.info.textContent=current>=questions.length?'All questions completed':'Next: question '+(current+1);
-      shell.appendChild(meter.box);
-      if(current<questions.length){
-        const soundRow=document.createElement('div');
-        soundRow.className='voc-quiz-sound-row';
-        const testSound=document.createElement('button');
-        testSound.type='button';testSound.className='kbtn voc-quiz-test-sound';
-        testSound.textContent='🔊 Test sound';
-        testSound.setAttribute('aria-label','Test correct-answer sound');
-        quizAudioNotice=document.createElement('span');
-        quizAudioNotice.className='voc-quiz-audio-notice';
-        quizAudioNotice.setAttribute('role','status');
-        testSound.addEventListener('click',()=>{
-          playCorrectAnswerSound();
-          quizAudioNotice.textContent='If silent, check device volume, silent mode and site sound permissions.';
-        });
-        soundRow.append(testSound,quizAudioNotice);
-        shell.appendChild(soundRow);
+    const normalize=value=>String(value||'').trim().toLowerCase().replace(/[.!?]+$/,'');
+    function toReview(){
+      if(!entries.length && Array.isArray(quiz.words) && quiz.words.length){
+        // New saved quizzes retain the approved words, so replay has a useful Back action.
+        entries=quiz.words.filter(w=>w && typeof w.word==='string').slice(0,40);
+        selected=new Set(entries.map(w=>w.word.toLowerCase()));
       }
-      if (current >= questions.length) {
-        const headline = document.createElement('h3');
-        headline.textContent = 'Practice complete';
-        const summary = document.createElement('p');
-        summary.textContent = correct + ' of ' + questions.length + ' answers matched the expected answer. Writing questions need self-review.';
-        shell.append(headline, summary);
-        if (misses.length) {
-          const list = document.createElement('div');
-          list.className = 'voc-import-summary';
-          const h = document.createElement('h4');
-          h.textContent = 'Words to review';
-          list.append(h);
-          misses.forEach(i => {
-            const item = document.createElement('p');
-            item.textContent = questions[i].word + ' · ' + questions[i].explanation;
-            list.append(item);
+      if(entries.length){
+        showResults({document_type:'saved vocabulary'});
+        showScreen('review');
+      } else {
+        // Older saved quizzes never contained source words. Do not show a false
+        // "No clear target vocabulary" error or route to an empty review screen.
+        showScreen('saved');
+      }
+    }
+    function render(){
+      const completed=Math.min(current,questions.length);
+      const progress=Math.round(100*completed/questions.length);
+      meter.name.textContent=current===questions.length?'Session complete':'Question '+(current+1)+' of '+questions.length;
+      meter.percent.textContent=progress+'%';
+      meter.fill.style.width=progress+'%';
+      meter.track.setAttribute('aria-valuenow',String(progress));
+      meter.elapsed.textContent=completed+' / '+questions.length+' completed';
+      meter.info.textContent=current===questions.length?'Finished':(quiz.level||'B2')+' · '+(quiz.type||'Mixed');
+      stage.replaceChildren();
+
+      if(current===questions.length){
+        stage.className='voc-quiz-stage voc-quiz-results';
+        const eyebrow=document.createElement('p');
+        eyebrow.className='voc-quiz-eyebrow';
+        eyebrow.textContent='SESSION COMPLETE';
+        const headline=document.createElement('h2');
+        headline.textContent='Your practice, complete.';
+        const result=document.createElement('p');
+        result.className='voc-quiz-result-number';
+        const autoGraded=questions.filter(q=>q.kind!=='writing').length;
+        result.textContent=correct+' / '+autoGraded;
+        const note=document.createElement('p');
+        note.className='voc-quiz-result-note';
+        note.textContent='Automatically graded answers'+(autoGraded<questions.length?' · Writing requires self-review':'');
+        stage.append(eyebrow,headline,result,note);
+        if(misses.length){
+          const section=document.createElement('section');
+          section.className='voc-quiz-review';
+          const heading=document.createElement('h3');
+          heading.textContent='Worth another look';
+          section.append(heading);
+          const words=new Set();
+          misses.forEach(i=>{
+            const q=questions[i];
+            const key=String(q.word||'').toLowerCase();
+            if(words.has(key))return;
+            words.add(key);
+            const p=document.createElement('p');
+            p.textContent=q.word+' — '+q.explanation;
+            section.append(p);
           });
-          shell.append(list);
+          stage.append(section);
         }
-        shell.append(btn('Try quiz again · no AI credits', () => {current=0;checked=false;correct=0;misses=[];answers.fill('');show();}, 'next'));
-        shell.append(btn('Back to selected words', () => {target.replaceChildren();showResults({document_type:'mixed'});showScreen('review');}));
+        const actions=document.createElement('div');
+        actions.className='voc-quiz-result-actions';
+        actions.append(
+          btn('Practice again',()=>{current=0;checked=false;correct=0;misses=[];answers.fill('');render();},'next'),
+          btn(entries.length||quiz.words?.length?'Review selected words':'Back to saved quizzes',toReview,'kbtn')
+        );
+        stage.append(actions);
         return;
       }
-      const q = questions[current];
-      const head = document.createElement('div');
-      head.className = 'voc-import-quiz-top';
-      const a = document.createElement('strong');
-      a.textContent = 'Question ' + (current + 1) + ' / ' + questions.length;
-      const b = document.createElement('span');
-      b.textContent = q.kind.toUpperCase() + ' · ' + quiz.level;
-      head.append(a,b);
-      const title = document.createElement('h3');
-      title.textContent = q.prompt;
-      shell.append(head,title);
-      const responses = document.createElement('div');
-      responses.className = 'voc-import-responses';
-      const feedback = document.createElement('div');
-      feedback.className = 'voc-import-feedback';
+      stage.className='voc-quiz-stage';
+      const q=questions[current];
+      const top=document.createElement('div');
+      top.className='voc-import-quiz-top';
+      const detail=document.createElement('span');
+      detail.textContent=(q.kind||'Quiz').toUpperCase()+'  ·  '+(quiz.level||'B2');
+      const sound=btn('🔊 Test sound',()=>{
+        playCorrectAnswerSound();
+        quizAudioNotice.textContent='If silent, check device volume, silent mode and site sound permissions.';
+      },'voc-quiz-test-sound');
+      sound.setAttribute('aria-label','Test answer feedback sound');
+      quizAudioNotice=document.createElement('span');
+      quizAudioNotice.className='voc-quiz-audio-notice';
+      quizAudioNotice.setAttribute('role','status');
+      quizAudioNotice.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)';
+      top.append(detail,sound,quizAudioNotice);
+      const prompt=document.createElement('h3');
+      prompt.className='voc-quiz-prompt';
+      prompt.textContent=q.prompt;
+      stage.append(top,prompt);
+
+      const responses=document.createElement('div');
+      responses.className='voc-import-responses';
+      const feedback=document.createElement('div');
+      feedback.className='voc-import-feedback';
       feedback.setAttribute('role','status');
       feedback.setAttribute('aria-live','polite');
       let input;
+      const action=btn(q.options?.length?'Choose an answer':'Check answer',()=>{if(!checked){if(!q.options?.length)grade();return;}current++;checked=false;render();},'next');
+      if(q.options?.length)action.disabled=true;
 
-      const normalized = value => String(value || '').trim().toLowerCase().replace(/[.!?]+$/, '');
-      function gradeAnswer() {
+      function grade(){
         if(checked)return;
-        const value = String(answers[current] || '').trim();
-        if(!value) {
-          feedback.textContent='Choose or type an answer first.';
-          return;
-        }
+        const value=String(answers[current]||'').trim();
+        if(!value){feedback.textContent='Choose or type an answer first.';return;}
         checked=true;
-        const match=normalized(value)===normalized(q.answer);
-        if(match){
-          correct++;
-          playCorrectAnswerSound();
-        } else if(q.kind !== 'writing') {
-          misses.push(current);
-        }
-
-        responses.querySelectorAll('.voc-import-answer').forEach(option => {
-          const isCorrect=normalized(option.textContent)===normalized(q.answer);
-          const wasChosen=normalized(option.textContent)===normalized(value);
+        const match=normalize(value)===normalize(q.answer);
+        if(q.kind!=='writing' && match){correct++;playCorrectAnswerSound();}
+        else if(q.kind!=='writing' && !match)misses.push(current);
+        responses.querySelectorAll('.voc-import-answer').forEach(option=>{
+          const isCorrect=normalize(option.textContent)===normalize(q.answer);
+          const chosen=normalize(option.textContent)===normalize(value);
           option.disabled=true;
           option.classList.toggle('voc-answer-correct',isCorrect);
-          option.classList.toggle('voc-answer-incorrect',wasChosen&&!match);
-          option.setAttribute('aria-pressed',String(wasChosen));
+          option.classList.toggle('voc-answer-incorrect',chosen&&!match);
+          option.setAttribute('aria-pressed',String(chosen));
         });
-
         feedback.replaceChildren();
-        feedback.classList.toggle('voc-feedback-correct',match);
-        feedback.classList.toggle('voc-feedback-incorrect',!match);
-        const resultText=document.createElement('strong');
-        resultText.textContent=q.kind==='writing'
-          ? 'Compare your writing with this example:'
-          : match ? '✓ Correct!' : '✕ Not quite';
-        feedback.appendChild(resultText);
+        feedback.classList.toggle('voc-feedback-correct',match && q.kind!=='writing');
+        feedback.classList.toggle('voc-feedback-incorrect',!match && q.kind!=='writing');
+        const heading=document.createElement('strong');
+        heading.textContent=q.kind==='writing'?'Compare your sentence:':match?'✓ Correct!':'✕ Not quite';
+        feedback.appendChild(heading);
         if(!match || q.kind==='writing'){
-          const answerText=document.createElement('p');
-          answerText.textContent=(q.kind==='writing'?'Example answer: ':'Correct answer: ')+q.answer;
-          answerText.className='voc-correct-answer-text';
-          feedback.appendChild(answerText);
+          const answer=document.createElement('p');
+          answer.className='voc-correct-answer-text';
+          answer.textContent=(q.kind==='writing'?'Example answer: ':'Correct answer: ')+q.answer;
+          feedback.appendChild(answer);
         }
         if(q.explanation){
-          const why=document.createElement('p');
-          why.textContent=q.explanation;
-          feedback.appendChild(why);
+          const explanation=document.createElement('p');
+          explanation.textContent=q.explanation;
+          feedback.appendChild(explanation);
         }
         if(q.kind==='writing'){
-          const review=btn('Mark for review',()=>{
-            if(!misses.includes(current)) misses.push(current);
-            review.disabled=true;review.textContent='Added to review';
-          });
-          feedback.appendChild(review);
+          feedback.append(btn('Add to review',()=>{if(!misses.includes(current))misses.push(current);},'kbtn'));
         }
         if(input)input.disabled=true;
-        if(next){
-          next.disabled=false;
-          next.textContent=current===questions.length-1?'View results':'Next question →';
-        }
+        action.disabled=false;
+        action.textContent=current===questions.length-1?'View results':'Next question →';
       }
-
-      if (q.options.length) {
-        q.options.forEach(opt => {
-          const option=btn(opt,()=>{
+      if(Array.isArray(q.options) && q.options.length){
+        q.options.forEach((optionText,i)=>{
+          const option=btn(optionText,()=>{
             if(checked)return;
-            answers[current]=opt;
-            // Multiple choice and True/False grade instantly when selected.
-            gradeAnswer();
+            answers[current]=optionText;
+            grade();
           },'voc-import-answer');
           option.setAttribute('aria-pressed','false');
-          responses.appendChild(option);
+          option.setAttribute('aria-label','Option '+(i+1)+': '+optionText);
+          responses.append(option);
         });
       } else {
         input=q.kind==='writing'?document.createElement('textarea'):document.createElement('input');
         input.className='myin';
         input.style.width='100%';
-        input.placeholder=q.kind==='writing'?'Write your own sentence using '+q.word:'Type your answer';
-        input.value=answers[current] || '';
+        input.placeholder=q.kind==='writing'?'Write a sentence using '+q.word:'Type your answer';
         input.maxLength=350;
-        input.addEventListener('input',()=>{answers[current]=input.value});
-        responses.appendChild(input);
+        input.value=answers[current]||'';
+        input.addEventListener('input',()=>{answers[current]=input.value;});
+        responses.append(input);
       }
-
-      const next=btn(q.options.length?'Choose an answer':'Check answer',()=>{
-        if(!checked){
-          // Written answers still require explicit submission.
-          if(!q.options.length)gradeAnswer();
-          return;
-        }
-        current++;
-        checked=false;
-        show();
-      },'next');
-      if(q.options.length)next.disabled=true;
-      shell.append(responses,feedback,next);
+      stage.append(responses,feedback,action);
     }
-    show();
+    render();
     showScreen('practice');
   }
+
   async function generateQuiz() {
     if (working || quizBusy) return;
     const selectedWords = selection();
@@ -963,7 +983,7 @@
       if(!Array.isArray(payload.questions) || !payload.questions.length) throw new Error('No valid questions were returned.');
       stopQuizProgress(true);
       lastQuiz = {id:Date.now(),file:lastFile,level:config.level,type:config.quizType,
-        questions:payload.questions,date:new Date().toISOString()};
+        questions:payload.questions,words:selectedWords.map(w=>({word:w.word,type:w.type,arabic:w.arabic,english_definition:w.english_definition,example:w.example,ipa:w.ipa,source_excerpt:w.source_excerpt})),date:new Date().toISOString()};
       saveQuiz(lastQuiz);
       message.textContent = payload.questions.length + ' questions ready · Saved for replay without AI credits.';
       renderQuiz(lastQuiz);

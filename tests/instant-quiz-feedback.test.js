@@ -137,3 +137,52 @@ test('prefers cached HTML WAV for mobile browser and does not create AudioContex
   assert.equal(getCalls(),2,'sound must never make extra API calls');
   dom.window.close();
 });
+
+test('question changes retain a single progress meter and results return to saved quizzes safely',async()=>{
+  const {dom,d}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  const meter=d.querySelector('.voc-quiz-slim-meter');
+  assert.ok(meter);
+  assert.equal(d.querySelectorAll('.voc-quiz-slim-meter').length,1);
+  d.querySelector('.voc-import-answer').click();
+  d.querySelector('.voc-quiz-stage button.next').click();
+  assert.equal(d.querySelector('.voc-quiz-slim-meter'),meter,'progress node should not be torn down at results');
+  assert.equal(d.querySelectorAll('.voc-quiz-slim-meter').length,1);
+  assert.equal(d.querySelector('.voc-quiz-results .voc-quiz-result-number').textContent,'1 / 1');
+  assert.ok(d.querySelector('.voc-quiz-results button'));
+  const saved=JSON.parse(dom.window.localStorage.getItem('engl01_import_quizzes')||'[]');
+  assert.equal(saved[0].words[0].word,'achieve','the reviewed source words are persisted for back navigation');
+  // Simulate a fresh file selection, which clears the current in-memory word list.
+  d.getElementById('vocImportFile').dispatchEvent(new dom.window.Event('change'));
+  d.querySelector('.voc-quiz-result-actions button:last-child').click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'review','saved quiz restores approved vocabulary');
+  assert.ok(d.querySelector('#vocImportRows'));
+  assert.equal(d.querySelector('#vocImportRows').textContent.includes('achieve'),true);
+  assert.equal(d.getElementById('vocImportResults').textContent.includes('No clear target vocabulary'),false);
+  dom.window.close();
+});
+
+test('older saved quizzes without stored word lists go back to Saved, not blank Review',async()=>{
+  const {dom,d}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  const saved=JSON.parse(dom.window.localStorage.getItem('engl01_import_quizzes'));
+  delete saved[0].words;
+  dom.window.localStorage.setItem('engl01_import_quizzes',JSON.stringify(saved));
+  // Re-create the page so the Saved button reads this older stored record,
+  // rather than the closure created before the fixture was changed.
+  dom.window.eval(script);
+  d.querySelector('[data-stage="saved"]').click();
+  d.querySelector('#vocImportSavedQuizzes button').click();
+  d.querySelector('.voc-import-answer').click();
+  d.querySelector('.voc-quiz-stage button.next').click();
+  d.querySelector('.voc-quiz-result-actions button:last-child').click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'saved');
+  assert.equal(d.getElementById('vocImportResults').textContent.includes('No clear target vocabulary'),false);
+  dom.window.close();
+});

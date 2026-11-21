@@ -174,7 +174,9 @@ test('older saved quizzes without stored word lists go back to Saved, not blank 
   const saved=JSON.parse(dom.window.localStorage.getItem('engl01_import_quizzes'));
   delete saved[0].words;
   dom.window.localStorage.setItem('engl01_import_quizzes',JSON.stringify(saved));
-  d.getElementById('vocImportFile').dispatchEvent(new dom.window.Event('change'));
+  // Re-create the page so the Saved button reads this older stored record,
+  // rather than the closure created before the fixture was changed.
+  dom.window.eval(script);
   d.querySelector('[data-stage="saved"]').click();
   d.querySelector('#vocImportSavedQuizzes button').click();
   d.querySelector('.voc-import-answer').click();

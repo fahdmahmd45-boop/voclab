@@ -298,7 +298,7 @@
       window.speechSynthesis.cancel();
       const utterance=new window.SpeechSynthesisUtterance(phrase);
       utterance.lang=locale;
-      utterance.rate=.88;
+      utterance.rate=typeof window.voclabSpeechRate==='function'?window.voclabSpeechRate():.80;
       window.speechSynthesis.speak(utterance);
       return true;
     } catch {return false;}

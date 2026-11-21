@@ -1,0 +1,37 @@
+/* VOC LAB · Editorial vocabulary study cards · light and dark theme
+   Scoped to the Import & Learn study screen; other quizzes remain unchanged. */
+#p-files .voc-study-intro{margin:0 0 20px}
+#p-files .voc-study-intro h2{font:500 clamp(27px,3.5vw,36px)/1.15 var(--en);letter-spacing:-.035em;margin:0 0 7px;color:var(--tx)}
+#p-files .voc-study-intro p{font-size:13px;color:var(--mut);margin:0}
+#p-files .voc-study-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px 26px;margin:0 0 14px;max-width:790px;box-shadow:none;min-width:0}
+#p-files .voc-study-card-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px;min-width:0}
+#p-files .voc-study-identity{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+#p-files .voc-study-term{font:500 clamp(29px,3.8vw,44px)/1.12 var(--en);letter-spacing:.01em;color:var(--tx);margin:0;overflow-wrap:anywhere;text-transform:none}
+#p-files .voc-study-part{background:var(--card2);border-radius:999px;padding:3px 10px;color:var(--mut);font:italic 500 12px var(--en);white-space:nowrap}
+#p-files .voc-study-word-audio .voc-import-audio{display:inline-flex;align-items:center;gap:0;margin:0;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card2)}
+#p-files .voc-study-word-audio .voc-import-audio-button{border:0!important;border-radius:0!important;margin:0!important;padding:8px 11px!important;min-height:38px;background:transparent!important;box-shadow:none!important;white-space:nowrap;color:var(--tx);font:600 12px var(--ui)}
+#p-files .voc-study-word-audio .voc-import-audio-button + .voc-import-audio-button{border-left:1px solid var(--line)!important}
+#p-files .voc-study-word-audio .voc-import-audio-button:hover,#p-files .voc-study-example-voices button:hover{color:var(--amber)}
+#p-files .voc-study-arabic{font:400 clamp(16px,1.8vw,20px)/1.6 var(--ar);color:var(--tx);margin:0 0 3px;unicode-bidi:plaintext;text-align:start}
+#p-files .voc-study-definition{font:400 clamp(14px,1.55vw,17px)/1.55 var(--ui);color:var(--tx);margin:0}
+#p-files .voc-study-example{border-top:1px solid var(--line);margin-top:18px;padding-top:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+#p-files .voc-study-example-text{min-width:0;flex:1;font:400 13px/1.55 var(--ui);color:var(--mut);margin:0;overflow-wrap:anywhere}
+#p-files .voc-study-example-label{font:italic 500 15px var(--en);color:var(--amber);padding-right:5px}
+#p-files .voc-study-example-audio{flex:0 0 auto;position:relative}
+#p-files .voc-study-example-audio summary{font:500 12px var(--ui);color:var(--mut);list-style:none;cursor:pointer;padding:7px 3px;white-space:nowrap}
+#p-files .voc-study-example-audio summary::-webkit-details-marker{display:none}
+#p-files .voc-study-example-audio summary:before{content:'▶';font-size:9px;color:var(--amber);padding-right:7px}
+#p-files .voc-study-example-audio[open] summary:before{content:'▼'}
+#p-files .voc-study-example-voices{display:flex;justify-content:flex-end;padding-top:6px}
+#p-files .voc-study-example-voices .voc-import-audio{display:flex;gap:5px;margin:0}
+#p-files .voc-study-example-voices .voc-import-audio-button{min-height:34px;padding:6px 10px;border-radius:7px;background:var(--card2);font:600 11px var(--ui)}
+@media(max-width:600px){
+  #p-files .voc-study-card{padding:18px 16px;border-radius:10px;margin-bottom:10px}
+  #p-files .voc-study-card-top{align-items:flex-start;gap:9px;margin-bottom:12px}
+  #p-files .voc-study-term{font-size:clamp(25px,7vw,34px)}
+  #p-files .voc-study-word-audio .voc-import-audio-button{padding:7px 8px!important;min-height:35px;font-size:11px}
+  #p-files .voc-study-example{align-items:flex-start;flex-direction:column;gap:3px}
+  #p-files .voc-study-example-audio{align-self:flex-end}
+  #p-files .voc-study-arabic{font-size:17px}
+}
+@media(prefers-reduced-motion:reduce){#p-files .voc-study-card *{scroll-behavior:auto}}

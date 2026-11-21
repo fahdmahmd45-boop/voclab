@@ -20,12 +20,14 @@ test('reference layout: light ivory tokens, exact sidebar/bottom navigation and 
  assert.ok(html.indexOf('vl-reference-fidelity.css')>html.indexOf('vl-shell.css'),'fidelity overrides must load last');
  assert.ok(html.includes('Instrument+Sans'));
 });
-test('four navigation groups match reference terminology and preserve underlying legacy tabs',()=>{
+test('four main sections and an independent Search entry preserve underlying legacy tabs',()=>{
  const script=read('assets/vl-shell.js');
+ assert.ok(script.includes("{id:'search',label:'Search'"));
  assert.ok(script.includes("['list','Decks']"));
  assert.ok(script.includes("['my','My words']"));
  assert.ok(script.includes("['cards','Flashcards']"));
  assert.ok(script.includes("['files','Import & Learn']"));
+ assert.ok(!script.includes("['files','Import & Learn'],['dict','AI Search']"));
  assert.ok(script.includes("id='vlExitStudy'") || script.includes("exit.id='vlExitStudy'"));
 });
 test('initial ivory mode is shown once, then later user theme choice stays saved',()=>{

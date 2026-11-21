@@ -26,7 +26,7 @@ async function setup(){
 }
 test('navigation uses only Home Library Study Create and routes through existing tabs',async()=>{
   const dom=await setup(),d=dom.window.document;
-  assert.deepEqual([...d.querySelectorAll('.vl-nav-item')].map(x=>x.dataset.dest),['home','library','study','create']);
+  assert.deepEqual([...d.querySelectorAll('.vl-nav-item')].map(x=>x.dataset.dest),['home','search','library','study','create']);
   d.querySelector('[data-dest="study"]').click();await tick();
   assert.equal(d.querySelector('.tab.on').dataset.p,'cards');
   assert.deepEqual([...d.querySelectorAll('#vlSubnav button')].map(x=>x.dataset.p),['cards','mcq','type']);
@@ -34,8 +34,12 @@ test('navigation uses only Home Library Study Create and routes through existing
   assert.equal(d.querySelector('.tab.on').dataset.p,'mcq');
   d.querySelector('[data-dest="create"]').click();await tick();
   assert.equal(d.querySelector('.tab.on').dataset.p,'files');
-  d.querySelector('#vlSubnav button[data-p="dict"]').click();await tick();
+  assert.deepEqual([...d.querySelectorAll('#vlSubnav button')].map(x=>x.dataset.p),['files']);
+  d.querySelector('[data-dest="search"]').click();await tick();
   assert.equal(d.querySelector('.tab.on').dataset.p,'dict');
+  assert.equal(d.querySelector('.vl-nav-item.on').dataset.dest,'search');
+  d.querySelector('[data-dest="create"]').click();await tick();
+  assert.equal(d.querySelector('.tab.on').dataset.p,'files');
   dom.window.close();
 });
 test('programmatic navigation and theme toggling stay synchronized',async()=>{
@@ -59,5 +63,24 @@ test('focus mode provides an exit, not an unreachable hidden nav',async()=>{
   exit.click();await tick();
   assert.equal(d.querySelector('.tab.on').dataset.p,'home');
   assert.equal(d.body.classList.contains('vl-in-session'),false);
+  dom.window.close();
+});
+
+test('desktop global Search sends a query to the existing AI Search form only on submit',async()=>{
+  const dom=await setup(),d=dom.window.document;
+  let calls=0;
+  dom.window.aiSearchLookup=()=>{calls++};
+  const dict=d.getElementById('p-dict');
+  const input=d.createElement('input');input.id='dIn';dict.appendChild(input);
+  const form=d.getElementById('vlGlobalSearch');
+  assert.ok(form,'global search must exist in desktop header');
+  const globalInput=d.getElementById('vlGlobalQuery');
+  globalInput.value='resilience';
+  assert.equal(calls,0,'typing must not spend AI credits');
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  assert.equal(d.querySelector('.tab.on').dataset.p,'dict');
+  assert.equal(input.value,'resilience');
+  assert.equal(calls,1);
   dom.window.close();
 });

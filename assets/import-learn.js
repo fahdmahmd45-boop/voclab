@@ -114,7 +114,14 @@
   screens.practice.appendChild(practiceStatus);
   const practiceOutput=document.createElement('div');
   practiceOutput.id='vocImportPracticeOutput';screens.practice.appendChild(practiceOutput);
-  screens.practice.appendChild(back('← Back to selected words',()=>showScreen('review')));
+  screens.practice.appendChild(back('← Back',()=>{
+    if(!entries.length && Array.isArray(currentQuiz?.words) && currentQuiz.words.length){
+      entries=currentQuiz.words.filter(w=>w && typeof w.word==='string').slice(0,40);
+      selected=new Set(entries.map(w=>w.word.toLowerCase()));
+      if(entries.length)showResults({document_type:'saved vocabulary'});
+    }
+    showScreen(entries.length?'review':'saved');
+  }));
   const savedTitle=document.createElement('div');
   savedTitle.className='voc-flow-title';
   savedTitle.innerHTML='<div class="eyebrow">SAVED PRACTICE</div><h2>Your quizzes.</h2><p>Replay without AI credits.</p>';
@@ -855,10 +862,14 @@
       detail.textContent=(q.kind||'Quiz').toUpperCase()+'  ·  '+(quiz.level||'B2');
       const sound=btn('🔊 Test sound',()=>{
         playCorrectAnswerSound();
-        sound.title='If silent, check device volume, silent mode, and site sound permissions.';
+        quizAudioNotice.textContent='If silent, check device volume, silent mode and site sound permissions.';
       },'voc-quiz-test-sound');
       sound.setAttribute('aria-label','Test answer feedback sound');
-      top.append(detail,sound);
+      quizAudioNotice=document.createElement('span');
+      quizAudioNotice.className='voc-quiz-audio-notice';
+      quizAudioNotice.setAttribute('role','status');
+      quizAudioNotice.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)';
+      top.append(detail,sound,quizAudioNotice);
       const prompt=document.createElement('h3');
       prompt.className='voc-quiz-prompt';
       prompt.textContent=q.prompt;

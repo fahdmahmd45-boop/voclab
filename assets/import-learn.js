@@ -566,21 +566,81 @@
   function renderStudy(){
     const words=selection();
     practiceOutput.replaceChildren();
-    const heading=document.createElement('h2');heading.textContent=lastIntent==='deck'?'Saved to your deck':'Study your selected words';
-    heading.style.cssText='font-size:24px;margin:0 0 12px';practiceOutput.appendChild(heading);
+    const heading=document.createElement('div');
+    heading.className='voc-study-intro';
+    const title=document.createElement('h2');
+    title.textContent=lastIntent==='deck'?'Your words are saved.':'Study your vocabulary.';
+    const subtitle=document.createElement('p');
+    subtitle.textContent=words.length+' selected words · Tap US or UK to hear pronunciation.';
+    heading.append(title,subtitle);
+    practiceOutput.appendChild(heading);
+
     for(const w of words){
-      const card=document.createElement('article');card.className='myform';card.style.marginBottom='10px';
-      const term=document.createElement('h3');term.textContent=w.word;term.style.cssText='font-size:23px;font-family:var(--en)';
-      const meaning=document.createElement('p');meaning.textContent=w.arabic||'';meaning.dir='rtl';meaning.style.textAlign='left';
-      const def=document.createElement('p');def.textContent=w.english_definition||'';
-      const ex=document.createElement('p');ex.textContent=w.example||'';ex.style.cssText='font-size:12px;color:var(--mut);margin-top:8px';
-      card.append(term,meaning,def,ex);
-      addAudioControls(card,w.word,'word '+w.word);
-      if(w.example)addAudioControls(card,w.example,'example for '+w.word);
+      const card=document.createElement('article');
+      card.className='voc-study-card';
+      const top=document.createElement('div');
+      top.className='voc-study-card-top';
+      const identity=document.createElement('div');
+      identity.className='voc-study-identity';
+      const term=document.createElement('h3');
+      term.className='voc-study-term';
+      term.textContent=w.word;
+      identity.appendChild(term);
+      if(w.type){
+        const kind=document.createElement('span');
+        kind.className='voc-study-part';
+        kind.textContent=w.type;
+        identity.appendChild(kind);
+      }
+      const audio=document.createElement('div');
+      audio.className='voc-study-word-audio';
+      audio.setAttribute('role','group');
+      audio.setAttribute('aria-label','Pronunciation of '+w.word);
+      addAudioControls(audio,w.word,'word '+w.word);
+      top.append(identity,audio);
+      card.appendChild(top);
+
+      if(w.arabic){
+        const meaning=document.createElement('p');
+        meaning.className='voc-study-arabic';
+        meaning.lang='ar';
+        meaning.dir='auto';
+        meaning.textContent=w.arabic;
+        card.appendChild(meaning);
+      }
+      if(w.english_definition){
+        const definition=document.createElement('p');
+        definition.className='voc-study-definition';
+        definition.textContent=w.english_definition;
+        card.appendChild(definition);
+      }
+      if(w.example){
+        const example=document.createElement('div');
+        example.className='voc-study-example';
+        const sentence=document.createElement('p');
+        sentence.className='voc-study-example-text';
+        const mark=document.createElement('span');
+        mark.className='voc-study-example-label';
+        mark.textContent='Example: ';
+        const exampleText=document.createElement('span');
+        exampleText.textContent=w.example;
+        sentence.append(mark,exampleText);
+        const details=document.createElement('details');
+        details.className='voc-study-example-audio';
+        const summary=document.createElement('summary');
+        summary.textContent='Example audio';
+        const voice=document.createElement('div');
+        voice.className='voc-study-example-voices';
+        addAudioControls(voice,w.example,'example for '+w.word);
+        details.append(summary,voice);
+        example.append(sentence,details);
+        card.appendChild(example);
+      }
       practiceOutput.appendChild(card);
     }
     practiceStatus.textContent=words.length+' words ready';
-    currentQuiz=null;showScreen('practice');
+    currentQuiz=null;
+    showScreen('practice');
   }
 
   function renderQuiz(quiz) {

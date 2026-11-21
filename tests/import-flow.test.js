@@ -62,9 +62,11 @@ test('large import switches setup -> paginated review -> standalone quiz -> save
   assert.ok(meter,'actual completion meter appears inside quiz');
   assert.equal(meter.getAttribute('aria-valuenow'),'0');
   get('vocImportPracticeOutput').querySelector('.voc-import-answer').click();
-  const checkButton=[...get('vocImportPracticeOutput').querySelectorAll('button')].find(b=>b.textContent==='Check answer');
-  checkButton.click();
-  checkButton.click();
+  assert.ok(get('vocImportPracticeOutput').querySelector('.voc-feedback-correct'),'correct answer is graded on click');
+  assert.ok(get('vocImportPracticeOutput').querySelector('.voc-answer-correct'),'correct option is highlighted');
+  const nextButton=[...get('vocImportPracticeOutput').querySelectorAll('button')].find(b=>b.textContent.startsWith('Next question'));
+  assert.ok(nextButton,'user proceeds after seeing feedback');
+  nextButton.click();
   const nextMeter=get('vocImportPracticeOutput').querySelector('.voc-import-quiz [role="progressbar"]');
   assert.equal(Number(nextMeter.getAttribute('aria-valuenow'))>0,true,'progress increases after answering question');
   assert.equal([...window.document.querySelectorAll('.voc-flow-view')].filter(x=>!x.hidden).length,1);

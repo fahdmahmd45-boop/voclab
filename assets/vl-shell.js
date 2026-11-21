@@ -1,4 +1,4 @@
-/* VOC LAB phase 2: four-destination shell over the original eight app tabs.
+/* VOC LAB: independent Search, desktop global entry and five-item mobile navigation.
    Existing tab handlers, account logic, decks, credits and files remain intact. */
 (() => {
   'use strict';
@@ -6,15 +6,17 @@
   window.__VL_SHELL__=true;
   const DESTINATIONS=[
     {id:'home',label:'Home',subs:[['home','Overview']]},
+    {id:'search',label:'Search',subs:[['dict','AI Search']]},
     {id:'library',label:'Library',subs:[['list','Decks'],['my','My words']]},
     {id:'study',label:'Study',subs:[['cards','Flashcards'],['mcq','Quiz'],['type','Spelling']]},
-    {id:'create',label:'Create',subs:[['files','Import & Learn'],['dict','AI Search']]}
+    {id:'create',label:'Create',subs:[['files','Import & Learn']]}
   ];
-  const DEST_OF={home:'home',list:'library',my:'library',cards:'study',mcq:'study',type:'study',files:'create',dict:'create'};
+  const DEST_OF={home:'home',dict:'search',list:'library',my:'library',cards:'study',mcq:'study',type:'study',files:'create'};
   const STUDY=new Set(['cards','mcq','type']);
   const svg=(d)=>'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
   const ICON={
     home:svg('<path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/>'),
+    search:svg('<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/>'),
     library:svg('<path d="M5 4h4v16H5zM11 4h4v16h-4zM17 5l3 .8-3.6 14.4-3-.8"/>'),
     study:svg('<path d="M3 6c3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0zM12 6c3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0z"/>'),
     create:svg('<path d="M12 5v14M5 12h14"/>'),
@@ -68,6 +70,49 @@
     document.body.appendChild(exit);
     document.body.classList.add('vl-shell');
   }
+
+  function buildGlobalSearch(){
+    const header=document.querySelector('header .hwrap');
+    if(!header || document.getElementById('vlGlobalSearch'))return;
+    const form=document.createElement('form');
+    form.id='vlGlobalSearch';
+    form.className='vl-global-search';
+    form.setAttribute('role','search');
+    form.setAttribute('aria-label','Search vocabulary from anywhere');
+    const icon=document.createElement('span');
+    icon.className='vl-global-search-icon';
+    icon.innerHTML=ICON.search;
+    const input=document.createElement('input');
+    input.type='search';
+    input.id='vlGlobalQuery';
+    input.name='query';
+    input.maxLength=120;
+    input.autocomplete='off';
+    input.spellcheck=false;
+    input.placeholder='Search a word or phrase…';
+    input.setAttribute('aria-label','Search a word or phrase');
+    const action=document.createElement('button');
+    action.type='submit';
+    action.textContent='Search';
+    action.setAttribute('aria-label','Search vocabulary');
+    form.append(icon,input,action);
+    const headerActions=header.querySelector('.hbtns');
+    if(headerActions)header.insertBefore(form,headerActions);
+    else header.appendChild(form);
+    form.addEventListener('submit',event=>{
+      event.preventDefault();
+      const query=input.value.trim();
+      openTab('dict');
+      // Keep the original AI Search form, results, credits, and auth.
+      const existing=document.getElementById('dIn');
+      if(existing){
+        if(query)existing.value=query;
+        existing.focus();
+        if(query && typeof window.aiSearchLookup==='function')window.aiSearchLookup();
+      }
+    });
+  }
+
   function buildSubnav(){
     const main=document.querySelector('main');if(!main)return;
     subnav=document.createElement('nav');subnav.id='vlSubnav';subnav.className='vl-subnav';
@@ -107,7 +152,7 @@
   function start(){
     const tabs=document.querySelector('.tabs');
     if(!tabs||!document.querySelector('main'))return;
-    buildNav();buildSubnav();syncTheme();sync();
+    buildNav();buildSubnav();buildGlobalSearch();syncTheme();sync();
     new MutationObserver(sync).observe(tabs,{subtree:true,attributes:true,attributeFilter:['class']});
     document.addEventListener('click',()=>setTimeout(sync,0));
     window.addEventListener('voclab:themechange',syncTheme);

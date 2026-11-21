@@ -18,6 +18,7 @@ html body .voc-bottom-nav,html body .voc-home-subnav,html body .voc-footer,html 
   .vl-nav{top:0;left:0;bottom:0;width:232px;box-sizing:border-box;padding:28px 20px 24px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:28px}
   .vl-nav .vl-brand{font-family:var(--en)!important;font-size:28px;letter-spacing:-.01em;text-align:left;padding:0 4px!important}
   .vl-nav-items{display:flex;flex-direction:column;gap:2px}
+  .vl-nav .vl-nav-item[data-dest="search"]{display:none!important}
   .vl-nav .vl-nav-item{min-height:42px;padding:0 10px;border-radius:4px;font-size:15px}
   .vl-nav-item.on{background:var(--card2)}
   .vl-nav-item.on svg{color:var(--amber)}
@@ -34,7 +35,7 @@ html body .voc-bottom-nav,html body .voc-home-subnav,html body .voc-footer,html 
 @media(max-width:1023.98px){
   .vl-nav{left:0;right:0;bottom:0;border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom);display:block}
   .vl-nav .vl-brand,.vl-nav .vl-nav-foot{display:none!important}
-  .vl-nav-items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:560px;margin:0 auto}
+  .vl-nav-items{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-width:620px;margin:0 auto}
   .vl-nav .vl-nav-item{flex-direction:column;justify-content:center;gap:4px;min-height:56px;font-size:11px;font-weight:500}
   .vl-nav-item.on{color:var(--amber)!important}
   html body.vl-shell{padding-bottom:calc(57px + env(safe-area-inset-bottom))!important}
@@ -49,3 +50,23 @@ html body.vl-in-session.vl-shell{padding-left:0!important;padding-bottom:env(saf
 .vl-exit-study{display:none;position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:18px;z-index:85;min-height:42px;padding:9px 15px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--tx);font:600 13px var(--ui);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.09)}
 body.vl-in-session .vl-exit-study{display:inline-flex;align-items:center}
 @media(max-width:1023.98px){body.vl-in-session .vl-exit-study{top:auto;bottom:calc(env(safe-area-inset-bottom) + 14px);left:14px}}
+
+/* Search is a first-class destination, not a Create submenu. */
+.vl-global-search{display:flex;align-items:center;gap:9px;max-width:440px;width:min(440px,44vw);
+  margin-right:auto;border:1px solid var(--line);border-radius:8px;background:var(--card);height:42px;padding:0 7px 0 12px}
+.vl-global-search:focus-within{border-color:var(--amber);outline:1px solid var(--amber)}
+.vl-global-search-icon{display:flex;color:var(--mut);flex:0 0 auto}
+.vl-global-search-icon svg{width:18px;height:18px}
+.vl-global-search input{min-width:0;width:100%;flex:1;border:0;outline:none;background:transparent;color:var(--tx);font:400 13px var(--ui)}
+.vl-global-search input::placeholder{color:var(--mut);opacity:1}
+.vl-global-search button{flex:0 0 auto;border:0;border-radius:5px;padding:6px 10px;background:var(--card2);font:600 12px var(--ui);color:var(--tx);cursor:pointer}
+.vl-global-search button:hover{background:var(--amber);color:var(--onacc)}
+@media(min-width:1024px){
+  html body.vl-shell .hwrap{justify-content:space-between!important}
+  html body.vl-shell .vl-global-search{margin-left:auto;margin-right:18px}
+}
+@media(max-width:1023.98px){
+  .vl-global-search{display:none!important}
+  .vl-nav .vl-nav-item{min-width:0;padding:5px 2px;font-size:10px}
+  .vl-nav .vl-nav-item[data-dest="search"].on{color:var(--amber)!important}
+}

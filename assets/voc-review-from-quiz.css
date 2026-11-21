@@ -1,0 +1,18 @@
+/* Vocabulary review must remain available during an active or saved quiz. */
+#p-files .voc-review-action{display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;min-height:38px;padding:8px 13px!important;margin:0 0 12px!important;
+  border:1px solid var(--line);border-radius:7px;color:var(--tx);background:var(--card2);
+  font:600 12px var(--ui);cursor:pointer}
+#p-files .voc-return-to-quiz{width:100%;min-height:44px;border-radius:7px;margin:17px 0 0!important;font:600 13px var(--ui)}
+#p-files .voc-legacy-review{max-width:760px;margin:0 auto 25px}
+#p-files .voc-legacy-review>.eyebrow{font-size:11px;letter-spacing:.12em;margin:2px 0 8px;color:var(--mut)}
+#p-files .voc-legacy-review>h2{font:500 clamp(29px,4vw,37px)/1.12 var(--en);letter-spacing:-.03em;margin:0 0 10px}
+#p-files .voc-legacy-note{font:400 13px/1.55 var(--ui);color:var(--mut);margin:0 0 20px}
+#p-files .voc-legacy-word{border:1px solid var(--line);border-radius:9px;padding:15px 18px;margin-bottom:10px;background:var(--card)}
+#p-files .voc-legacy-word-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:9px}
+#p-files .voc-legacy-word-head h3{font:500 clamp(23px,3.4vw,29px)/1.2 var(--en);margin:0;overflow-wrap:anywhere}
+#p-files .voc-legacy-audio .voc-import-audio{display:flex;gap:5px;flex-wrap:nowrap;margin:0}
+#p-files .voc-legacy-audio button{padding:7px 10px;border-radius:7px;min-height:34px}
+#p-files .voc-legacy-word p{font:400 13px/1.55 var(--ui);margin:5px 0;color:var(--mut);overflow-wrap:anywhere}
+#p-files .voc-legacy-word .voc-legacy-answer{color:var(--tx);font-weight:600}
+@media(max-width:540px){#p-files .voc-legacy-word{padding:12px}#p-files .voc-review-action{width:100%}}

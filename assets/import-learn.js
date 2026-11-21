@@ -17,6 +17,7 @@
   let quizBusy = false;
   let lastQuiz = null;
   let currentQuiz = null;
+  let reviewQuizSource = null;
   const quizLevels = ['A1','A2','B1','B2','C1','C2','Auto'];
   const quizKinds = [
     ['mixed','Mixed Quiz','اختبار متنوع'],
@@ -85,7 +86,11 @@
   [['setup','Set up'],['review','Review words'],['practice','Practice'],['saved','Saved']].forEach(([id,title],i)=>{
     const b=document.createElement('button');
     b.type='button';b.textContent=(i<3?i+1+' · ':'')+title;b.dataset.stage=id;
-    b.onclick=()=>{if(id==='review'&&!entries.length)return;if(id==='practice'&&!currentQuiz&&!practiceOutput.children.length)return;showScreen(id)};
+    b.onclick=()=>{
+      if(id==='review'){openVocabularyReview();return;}
+      if(id==='practice'&&!currentQuiz&&!practiceOutput.children.length)return;
+      showScreen(id);
+    };
     navButtons[id]=b;nav.appendChild(b);
   });
   root.prepend(nav);
@@ -114,26 +119,112 @@
   screens.practice.appendChild(practiceStatus);
   const practiceOutput=document.createElement('div');
   practiceOutput.id='vocImportPracticeOutput';screens.practice.appendChild(practiceOutput);
-  screens.practice.appendChild(back('← Back',()=>{
-    if(!entries.length && Array.isArray(currentQuiz?.words) && currentQuiz.words.length){
-      entries=currentQuiz.words.filter(w=>w && typeof w.word==='string').slice(0,40);
-      selected=new Set(entries.map(w=>w.word.toLowerCase()));
-      if(entries.length)showResults({document_type:'saved vocabulary'});
-    }
-    showScreen(entries.length?'review':'saved');
-  }));
+  const reviewAction=back('← Review vocabulary',()=>openVocabularyReview());
+  reviewAction.classList.add('voc-review-action');
+  screens.practice.insertBefore(reviewAction,practiceOutput);
+  screens.practice.appendChild(back('← Review words',()=>openVocabularyReview()));
   const savedTitle=document.createElement('div');
   savedTitle.className='voc-flow-title';
   savedTitle.innerHTML='<div class="eyebrow">SAVED PRACTICE</div><h2>Your quizzes.</h2><p>Replay without AI credits.</p>';
   screens.saved.prepend(savedTitle);
   screens.saved.appendChild(back('← New import',()=>showScreen('setup')));
+  function hasQuizReviewWords(quiz){
+    return !!(quiz && (
+      (Array.isArray(quiz.words)&&quiz.words.some(w=>w && typeof w.word==='string' && w.word.trim())) ||
+      (Array.isArray(quiz.questions)&&quiz.questions.some(q=>q && typeof q.word==='string' && q.word.trim()))
+    ));
+  }
+  function renderLegacyVocabularyReview(quiz){
+    // Old saved sessions contain questions but no extracted vocabulary records.
+    // Present real words and explanations from the saved quiz, without inventing
+    // meanings or presenting them as freshly extracted document definitions.
+    result.replaceChildren();
+    const section=document.createElement('section');
+    section.className='voc-legacy-review';
+    const label=document.createElement('p');
+    label.className='eyebrow';label.textContent='VOCABULARY FROM SAVED QUIZ';
+    const heading=document.createElement('h2');
+    heading.textContent='Review the words.';
+    const note=document.createElement('p');
+    note.className='voc-legacy-note';
+    note.textContent='This older quiz did not save full definitions. These words and notes come from its saved questions.';
+    section.append(label,heading,note);
+    const seen=new Set();
+    for(const q of quiz.questions||[]){
+      const word=String(q?.word||'').trim();
+      if(!word||seen.has(word.toLowerCase()))continue;
+      seen.add(word.toLowerCase());
+      const card=document.createElement('article');
+      card.className='voc-legacy-word';
+      const title=document.createElement('h3');title.textContent=word;
+      const audio=document.createElement('div');audio.className='voc-legacy-audio';
+      addAudioControls(audio,word,'word '+word);
+      const head=document.createElement('div');head.className='voc-legacy-word-head';
+      head.append(title,audio);card.append(head);
+      if(q.prompt){
+        const prompt=document.createElement('p');
+        prompt.className='voc-legacy-prompt';prompt.textContent=q.prompt;card.append(prompt);
+      }
+      if(q.answer){
+        const answer=document.createElement('p');answer.className='voc-legacy-answer';
+        answer.textContent='Quiz answer: '+q.answer;card.append(answer);
+      }
+      if(q.explanation){
+        const explanation=document.createElement('p');explanation.className='voc-legacy-explanation';
+        explanation.textContent=q.explanation;card.append(explanation);
+      }
+      section.append(card);
+    }
+    const resume=document.createElement('button');
+    resume.className='next voc-return-to-quiz';resume.type='button';
+    resume.textContent='Continue quiz · no AI credits';
+    resume.addEventListener('click',()=>showScreen('practice'));
+    section.append(resume);
+    result.append(section);
+  }
+  function openVocabularyReview(){
+    if(currentQuiz && hasQuizReviewWords(currentQuiz)){
+      if(Array.isArray(currentQuiz.words) && currentQuiz.words.length){
+        // Persist the exact reviewed vocabulary with a new saved quiz.
+        // A replay must not accidentally show unrelated words from another file.
+        const restored=currentQuiz.words.filter(w=>w && typeof w.word==='string' && w.word.trim()).slice(0,40);
+        entries=restored;
+        const existingSelection=selected;
+        selected=new Set(entries.map(w=>w.word.toLowerCase()).filter(w=>existingSelection.has(w)));
+        if(!selected.size)selected=new Set(entries.map(w=>w.word.toLowerCase()));
+        if(reviewQuizSource!==currentQuiz || !get('vocImportRows')){
+          showResults({document_type:'saved vocabulary'});
+          reviewQuizSource=currentQuiz;
+        }
+        const reviewCard=get('vocImportRows')?.closest('.myform');
+        if(reviewCard && !reviewCard.querySelector('.voc-return-to-quiz')){
+          const resume=document.createElement('button');
+          resume.type='button';resume.className='next voc-return-to-quiz';
+          resume.textContent='Continue quiz · no AI credits';
+          resume.addEventListener('click',()=>showScreen('practice'));
+          reviewCard.append(resume);
+        }
+      } else {
+        renderLegacyVocabularyReview(currentQuiz);
+      }
+      showScreen('review');
+      return;
+    }
+    if(entries.length){
+      if(!get('vocImportRows'))showResults({document_type:'extracted vocabulary'});
+      showScreen('review');
+    } else {
+      showScreen('saved');
+    }
+  }
+
   function showScreen(id){
     const changed=panel.dataset.flowStage!==id;
     for(const [key,section] of Object.entries(screens))section.hidden=key!==id;
     for(const [key,button] of Object.entries(navButtons)){
       button.classList.toggle('active',key===id);
       button.setAttribute('aria-current',key===id?'step':'false');
-      button.disabled=(key==='review'&&!entries.length)||(key==='practice'&&!currentQuiz&&!practiceOutput.children.length);
+      button.disabled=(key==='review'&&!entries.length&&!hasQuizReviewWords(currentQuiz))||(key==='practice'&&!currentQuiz&&!practiceOutput.children.length);
     }
     panel.dataset.flowStage=id;
     // Don't yank the viewport around when refreshing an already-open view.
@@ -758,6 +849,7 @@
   function renderQuiz(quiz) {
     if(!quiz || !Array.isArray(quiz.questions) || !quiz.questions.length) return;
     currentQuiz=quiz;
+    reviewQuizSource=null;
     const questions=quiz.questions;
     const target=practiceOutput;
     const answers=new Array(questions.length).fill('');
@@ -787,19 +879,10 @@
     };
     const normalize=value=>String(value||'').trim().toLowerCase().replace(/[.!?]+$/,'');
     function toReview(){
-      if(!entries.length && Array.isArray(quiz.words) && quiz.words.length){
-        // New saved quizzes retain the approved words, so replay has a useful Back action.
-        entries=quiz.words.filter(w=>w && typeof w.word==='string').slice(0,40);
-        selected=new Set(entries.map(w=>w.word.toLowerCase()));
-      }
-      if(entries.length){
-        showResults({document_type:'saved vocabulary'});
-        showScreen('review');
-      } else {
-        // Older saved quizzes never contained source words. Do not show a false
-        // "No clear target vocabulary" error or route to an empty review screen.
-        showScreen('saved');
-      }
+      // A file input change clears transient state, but this quiz still owns
+      // its saved words/questions. Restore its context before reviewing.
+      currentQuiz=quiz;
+      openVocabularyReview();
     }
     function render(){
       const completed=Math.min(current,questions.length);
@@ -1005,6 +1088,7 @@
     progress.hidden = true;
     status.textContent='Choose what to study, then analyze your file.';
     currentQuiz = null;
+    reviewQuizSource = null;
   });
   analyze.addEventListener('click', async () => {
     if (working) return;

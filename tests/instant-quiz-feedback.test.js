@@ -165,7 +165,7 @@ test('question changes retain a single progress meter and results return to save
   dom.window.close();
 });
 
-test('older saved quizzes without stored word lists go back to Saved, not blank Review',async()=>{
+test('older saved quizzes review their real question vocabulary without invented definitions',async()=>{
   const {dom,d}=await makeQuiz({
     kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
     options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
@@ -182,7 +182,61 @@ test('older saved quizzes without stored word lists go back to Saved, not blank 
   d.querySelector('.voc-import-answer').click();
   d.querySelector('.voc-quiz-stage button.next').click();
   d.querySelector('.voc-quiz-result-actions button:last-child').click();
-  assert.equal(d.getElementById('p-files').dataset.flowStage,'saved');
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'review');
+  assert.match(d.getElementById('vocImportResults').textContent,/Review the words/);
+  assert.match(d.getElementById('vocImportResults').textContent,/achieve/);
+  assert.match(d.getElementById('vocImportResults').textContent,/This older quiz did not save full definitions/);
   assert.equal(d.getElementById('vocImportResults').textContent.includes('No clear target vocabulary'),false);
+  dom.window.close();
+});
+
+test('Review words is enabled during replay and Continue quiz keeps the current question',async()=>{
+  const {dom,d,getCalls}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  const nav=d.querySelector('[data-stage="review"]');
+  assert.equal(nav.disabled,false,'Review words should be available from Practice');
+  d.querySelector('.voc-import-answer').click();
+  d.querySelector('.voc-quiz-stage button.next').click();
+  assert.equal(d.querySelector('.voc-quiz-result-number').textContent,'1 / 1');
+  nav.click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'review');
+  assert.equal(d.querySelectorAll('#vocImportRows label').length,1);
+  assert.match(d.querySelector('#vocImportRows').textContent,/achieve/);
+  assert.equal(d.querySelectorAll('.voc-return-to-quiz').length,1);
+  d.querySelector('.voc-return-to-quiz').click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'practice');
+  assert.equal(d.querySelector('.voc-quiz-result-number').textContent,'1 / 1','quiz progress remains intact');
+  assert.equal(getCalls(),2,'reviewing words should not make AI calls');
+  dom.window.close();
+});
+
+test('older quiz without stored words enables Review words and preserves its question answer and explanation',async()=>{
+  const {dom,d,getCalls}=await makeQuiz({
+    kind:'mcq',word:'achieve',prompt:'What does achieve mean?',
+    options:['Reach a goal','Avoid a task','Forget a goal','Postpone work'],
+    answer:'Reach a goal',explanation:'Achieve means accomplish.'
+  });
+  const saved=JSON.parse(dom.window.localStorage.getItem('engl01_import_quizzes'));
+  delete saved[0].words;
+  dom.window.localStorage.setItem('engl01_import_quizzes',JSON.stringify(saved));
+  dom.window.eval(script);
+  d.querySelector('[data-stage="saved"]').click();
+  d.querySelector('#vocImportSavedQuizzes button').click();
+  const nav=d.querySelector('[data-stage="review"]');
+  assert.equal(nav.disabled,false);
+  nav.click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'review');
+  const review=d.querySelector('.voc-legacy-review');
+  assert.ok(review);
+  assert.match(review.textContent,/Quiz answer: Reach a goal/);
+  assert.match(review.textContent,/Achieve means accomplish/);
+  assert.equal(review.querySelectorAll('.voc-legacy-word').length,1);
+  assert.equal(review.querySelectorAll('.voc-import-audio-button').length,2);
+  review.querySelector('.voc-return-to-quiz').click();
+  assert.equal(d.getElementById('p-files').dataset.flowStage,'practice');
+  assert.equal(getCalls(),2);
   dom.window.close();
 });
